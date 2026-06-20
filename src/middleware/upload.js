@@ -1,6 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 
 const DESTINATIONS = {
   featured_image: process.env.UPLOADS_ARTICLES_DIR,
@@ -70,6 +71,29 @@ function urlFor(fieldname, filename) {
   return `${URL_PREFIXES[fieldname]}/${filename}`;
 }
 
+// Reverses urlFor() to clean up files on disk once nothing in the DB references them
+// anymore (article deleted, file replaced, or explicitly removed via the form).
+function deleteUploadedFile(urlPath) {
+  if (!urlPath) return;
+
+  for (const [fieldname, prefix] of Object.entries(URL_PREFIXES)) {
+    if (urlPath.startsWith(`${prefix}/`)) {
+      const filename = urlPath.slice(prefix.length + 1);
+      if (filename !== path.basename(filename)) {
+        console.error(`Refusing to delete suspicious upload path: ${urlPath}`);
+        return;
+      }
+      const fullPath = path.join(DESTINATIONS[fieldname], filename);
+      fs.unlink(fullPath, (err) => {
+        if (err && err.code !== 'ENOENT') {
+          console.error(`Failed to delete uploaded file ${fullPath}:`, err);
+        }
+      });
+      return;
+    }
+  }
+}
+
 module.exports = {
   uploadArticleFiles: upload.fields([
     { name: 'featured_image', maxCount: 1 },
@@ -78,4 +102,5 @@ module.exports = {
     { name: 'pdf_file', maxCount: 1 },
   ]),
   urlFor,
+  deleteUploadedFile,
 };

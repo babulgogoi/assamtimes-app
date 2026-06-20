@@ -2,9 +2,30 @@ const bcrypt = require('bcryptjs');
 const authorsModel = require('../models/authors');
 const articlesModel = require('../models/articles');
 const slugify = require('../utils/slugify');
-const { urlFor } = require('../middleware/upload');
+const { urlFor, deleteUploadedFile } = require('../middleware/upload');
 
 const ADMIN_PAGE_SIZE = 20;
+
+function cleanupReplacedFiles(oldArticle, newData) {
+  if (oldArticle.featured_image && oldArticle.featured_image !== newData.featured_image) {
+    deleteUploadedFile(oldArticle.featured_image);
+  }
+  if (oldArticle.audio_file && oldArticle.audio_file !== newData.audio_file) {
+    deleteUploadedFile(oldArticle.audio_file);
+  }
+  if (oldArticle.pdf_file && oldArticle.pdf_file !== newData.pdf_file) {
+    deleteUploadedFile(oldArticle.pdf_file);
+  }
+  const newGallery = newData.gallery_images || [];
+  (oldArticle.gallery_images || []).filter((img) => !newGallery.includes(img)).forEach(deleteUploadedFile);
+}
+
+function cleanupAllFiles(article) {
+  if (article.featured_image) deleteUploadedFile(article.featured_image);
+  if (article.audio_file) deleteUploadedFile(article.audio_file);
+  if (article.pdf_file) deleteUploadedFile(article.pdf_file);
+  (article.gallery_images || []).forEach(deleteUploadedFile);
+}
 
 function loginForm(req, res) {
   if (req.session && req.session.authorId) {
@@ -226,6 +247,7 @@ async function updateArticle(req, res, next) {
 
     const data = await buildArticleData(req);
     await articlesModel.update(article.id, data);
+    cleanupReplacedFiles(article, data);
     res.redirect(`/admin/articles/${article.id}/edit`);
   } catch (err) {
     next(err);
@@ -234,7 +256,9 @@ async function updateArticle(req, res, next) {
 
 async function deleteArticle(req, res, next) {
   try {
+    const article = await articlesModel.getById(req.params.id);
     await articlesModel.remove(req.params.id);
+    if (article) cleanupAllFiles(article);
     res.redirect('/admin/articles');
   } catch (err) {
     next(err);
