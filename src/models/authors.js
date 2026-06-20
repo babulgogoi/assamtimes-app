@@ -49,10 +49,60 @@ async function findOrCreate({ username, displayName }) {
   return rows[0];
 }
 
+async function getById(id) {
+  const { rows } = await pool.query(
+    `SELECT id, username, display_name, bio, photo FROM authors WHERE id = $1`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+async function getAllWithCounts() {
+  const { rows } = await pool.query(
+    `SELECT au.id, au.username, au.display_name, au.photo,
+            (au.password_hash IS NOT NULL) AS can_login,
+            COUNT(a.id) AS article_count
+     FROM authors au
+     LEFT JOIN articles a ON a.author_id = au.id
+     GROUP BY au.id, au.username, au.display_name, au.photo, au.password_hash
+     ORDER BY au.display_name NULLS LAST, au.username`
+  );
+  return rows;
+}
+
+async function isUsernameTaken(username, excludeId = null) {
+  const params = excludeId ? [username, excludeId] : [username];
+  const { rows } = await pool.query(
+    `SELECT 1 FROM authors WHERE username = $1 ${excludeId ? 'AND id <> $2' : ''} LIMIT 1`,
+    params
+  );
+  return rows.length > 0;
+}
+
+async function create({ username, displayName, bio, photo }) {
+  const { rows } = await pool.query(
+    `INSERT INTO authors (username, display_name, bio, photo) VALUES ($1, $2, $3, $4) RETURNING id`,
+    [username, displayName || username, bio || null, photo || null]
+  );
+  return rows[0].id;
+}
+
+async function update(id, { username, displayName, bio, photo }) {
+  await pool.query(
+    `UPDATE authors SET username = $1, display_name = $2, bio = $3, photo = $4 WHERE id = $5`,
+    [username, displayName || username, bio || null, photo || null, id]
+  );
+}
+
 module.exports = {
   getByUsername,
   getByUsernameForAuth,
   setPassword,
   getAll,
   findOrCreate,
+  getById,
+  getAllWithCounts,
+  isUsernameTaken,
+  create,
+  update,
 };

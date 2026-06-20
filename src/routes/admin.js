@@ -2,6 +2,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const adminAuthorsController = require('../controllers/adminAuthorsController');
 const { requireAuth } = require('../middleware/auth');
 const { uploadArticleFiles } = require('../middleware/upload');
 
@@ -27,5 +28,11 @@ router.post('/articles', uploadArticleFiles, adminController.createArticle);
 router.get('/articles/:id/edit', adminController.editArticleForm);
 router.post('/articles/:id', uploadArticleFiles, adminController.updateArticle);
 router.post('/articles/:id/delete', adminController.deleteArticle);
+
+router.get('/authors', adminAuthorsController.listAuthors);
+router.get('/authors/new', adminAuthorsController.newAuthorForm);
+router.post('/authors', adminAuthorsController.createAuthor);
+router.get('/authors/:id/edit', adminAuthorsController.editAuthorForm);
+router.post('/authors/:id', adminAuthorsController.updateAuthor);
 
 module.exports = router;

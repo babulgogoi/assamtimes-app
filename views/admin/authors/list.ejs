@@ -1,0 +1,28 @@
+<div class="admin-list-header">
+  <h1>Authors</h1>
+  <a class="admin-btn admin-btn--primary" href="/admin/authors/new">+ New Author</a>
+</div>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Username</th>
+      <th>Display Name</th>
+      <th>Articles</th>
+      <th>Can Log In</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% authors.forEach(function (author) { %>
+      <tr>
+        <td><a href="/admin/authors/<%= author.id %>/edit"><%= author.username %></a></td>
+        <td><%= author.display_name || '—' %></td>
+        <td><%= author.article_count %></td>
+        <td><%= author.can_login ? 'Yes' : 'No' %></td>
+      </tr>
+    <% }) %>
+    <% if (!authors.length) { %>
+      <tr><td colspan="4">No authors found.</td></tr>
+    <% } %>
+  </tbody>
+</table>
