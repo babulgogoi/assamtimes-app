@@ -19,9 +19,7 @@
         <% articles.forEach(function (article) { %>
           <article class="article-card">
             <a href="/article/<%= article.slug %>">
-              <% if (article.featured_image) { %>
-                <img class="article-card__image" src="<%= article.featured_image %>" alt="<%= article.title %>">
-              <% } %>
+              <img class="article-card__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.title %>">
               <h2 class="article-card__title"><%= article.title %></h2>
             </a>
             <p class="article-meta">

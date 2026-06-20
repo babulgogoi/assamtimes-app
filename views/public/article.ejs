@@ -21,9 +21,7 @@
         <%= article.views_count %> views
       </p>
 
-      <% if (article.featured_image) { %>
-        <img class="article-detail__image" src="<%= article.featured_image %>" alt="<%= article.title %>">
-      <% } %>
+      <img class="article-detail__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.title %>">
 
       <% if (article.excerpt) { %>
         <p class="article-detail__excerpt"><%= article.excerpt %></p>

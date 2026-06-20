@@ -4,9 +4,7 @@
     <% if (lead) { %>
       <article class="lead-story">
         <a href="/article/<%= lead.slug %>">
-          <% if (lead.featured_image) { %>
-            <img class="lead-story__image" src="<%= lead.featured_image %>" alt="<%= lead.title %>">
-          <% } %>
+          <img class="lead-story__image" src="<%= lead.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= lead.title %>">
           <h1 class="lead-story__title"><%= lead.title %></h1>
         </a>
         <% if (lead.excerpt) { %>
@@ -27,9 +25,7 @@
       <% grid.forEach(function (article) { %>
         <article class="article-card">
           <a href="/article/<%= article.slug %>">
-            <% if (article.featured_image) { %>
-              <img class="article-card__image" src="<%= article.featured_image %>" alt="<%= article.title %>">
-            <% } %>
+            <img class="article-card__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.title %>">
             <h2 class="article-card__title"><%= article.title %></h2>
           </a>
           <p class="article-meta">

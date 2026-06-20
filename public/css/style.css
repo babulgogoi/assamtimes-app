@@ -38,10 +38,14 @@ body {
 }
 
 .site-header__logo {
-  font-size: 1.75rem;
-  font-weight: bold;
-  color: #1a1a1a;
-  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.site-header__logo img {
+  max-height: 50px;
+  width: auto;
+  display: block;
 }
 
 .site-main {
