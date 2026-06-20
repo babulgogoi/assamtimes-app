@@ -1,0 +1,47 @@
+<h1><%= page ? 'Edit Page' : 'New Page' %></h1>
+
+<% if (errors && errors.length) { %>
+  <ul class="admin-form-errors">
+    <% errors.forEach(function (e) { %><li><%= e %></li><% }) %>
+  </ul>
+<% } %>
+
+<form class="admin-form" method="post" action="<%= page && page.id ? '/admin/pages/' + page.id : '/admin/pages' %>">
+  <label>
+    Title
+    <input type="text" name="title" value="<%= page ? page.title : '' %>" required>
+  </label>
+
+  <label>
+    Slug <span class="admin-form-hint">(leave blank to auto-generate from title)</span>
+    <input type="text" name="slug" value="<%= page ? page.slug : '' %>">
+  </label>
+
+  <label>
+    Body
+    <textarea name="body" id="body" rows="14" required><%= page ? page.body : '' %></textarea>
+  </label>
+
+  <label>
+    Status
+    <select name="status">
+      <option value="draft" <%= page && page.status === 'draft' ? 'selected' : '' %>>Draft</option>
+      <option value="published" <%= !page || page.status === 'published' ? 'selected' : '' %>>Published</option>
+    </select>
+  </label>
+
+  <button type="submit" class="admin-btn admin-btn--primary"><%= page ? 'Save Changes' : 'Create Page' %></button>
+</form>
+
+<script src="/vendor/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+  tinymce.init({
+    selector: '#body',
+    license_key: 'gpl',
+    height: 500,
+    menubar: false,
+    promotion: false,
+    plugins: 'lists link image table code fullscreen wordcount',
+    toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist | blockquote link image table | code fullscreen',
+  });
+</script>

@@ -215,6 +215,20 @@ body {
   margin: 0 0 1.25rem;
 }
 
+.static-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.static-page__body {
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.static-page__body p {
+  margin: 0 0 1.25rem;
+}
+
 .article-detail__audio {
   width: 100%;
   margin: 1rem 0;

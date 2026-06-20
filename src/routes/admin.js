@@ -3,6 +3,7 @@ const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const adminAuthorsController = require('../controllers/adminAuthorsController');
+const adminPagesController = require('../controllers/adminPagesController');
 const { requireAuth } = require('../middleware/auth');
 const { uploadArticleFiles } = require('../middleware/upload');
 
@@ -34,5 +35,12 @@ router.get('/authors/new', adminAuthorsController.newAuthorForm);
 router.post('/authors', adminAuthorsController.createAuthor);
 router.get('/authors/:id/edit', adminAuthorsController.editAuthorForm);
 router.post('/authors/:id', adminAuthorsController.updateAuthor);
+
+router.get('/pages', adminPagesController.listPages);
+router.get('/pages/new', adminPagesController.newPageForm);
+router.post('/pages', adminPagesController.createPage);
+router.get('/pages/:id/edit', adminPagesController.editPageForm);
+router.post('/pages/:id', adminPagesController.updatePage);
+router.post('/pages/:id/delete', adminPagesController.deletePage);
 
 module.exports = router;

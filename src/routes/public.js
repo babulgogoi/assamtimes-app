@@ -15,5 +15,6 @@ router.get('/article/:slug', publicController.articleDetail);
 router.get('/category/:category', publicController.categoryPage);
 router.get('/author/:username', publicController.authorPage);
 router.get('/search', publicController.searchPage);
+router.get('/page/:slug', publicController.pageDetail);
 
 module.exports = router;

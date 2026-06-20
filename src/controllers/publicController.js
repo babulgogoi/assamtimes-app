@@ -1,5 +1,6 @@
 const articlesModel = require('../models/articles');
 const authorsModel = require('../models/authors');
+const pagesModel = require('../models/pages');
 
 const CATEGORY_PAGE_SIZE = 12;
 const AUTHOR_PAGE_SIZE = 12;
@@ -166,10 +167,28 @@ async function searchPage(req, res, next) {
   }
 }
 
+async function pageDetail(req, res, next) {
+  try {
+    const page = await pagesModel.getBySlug(req.params.slug);
+
+    if (!page || page.status !== 'published') {
+      return res.status(404).render('public/404', { title: 'Page Not Found' });
+    }
+
+    res.render('public/page', {
+      title: page.title,
+      page,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   home,
   articleDetail,
   categoryPage,
   authorPage,
   searchPage,
+  pageDetail,
 };
