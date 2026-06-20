@@ -3,6 +3,7 @@ const authorsModel = require('../models/authors');
 const articlesModel = require('../models/articles');
 const slugify = require('../utils/slugify');
 const { urlFor, deleteUploadedFile } = require('../middleware/upload');
+const CATEGORIES = require('../constants/categories');
 
 const ADMIN_PAGE_SIZE = 20;
 
@@ -96,6 +97,7 @@ async function newArticleForm(req, res, next) {
       title: 'New Article — Admin',
       authorName: req.session.authorName,
       authors,
+      categories: CATEGORIES,
       article: null,
       errors: [],
     });
@@ -116,6 +118,7 @@ async function editArticleForm(req, res, next) {
       title: `Edit: ${article.title} — Admin`,
       authorName: req.session.authorName,
       authors,
+      categories: CATEGORIES,
       article,
       errors: [],
     });
@@ -158,7 +161,6 @@ async function buildArticleData(req) {
     slug,
     title: body.title,
     body: body.body,
-    excerpt: body.excerpt || null,
     video_url: body.video_url || null,
     author_id: authorId,
     category: body.category || null,
@@ -213,6 +215,7 @@ async function createArticle(req, res, next) {
         title: 'New Article — Admin',
         authorName: req.session.authorName,
         authors,
+        categories: CATEGORIES,
         article: req.body,
         errors: ['Title and body are required.'],
       });
@@ -240,6 +243,7 @@ async function updateArticle(req, res, next) {
         title: `Edit: ${article.title} — Admin`,
         authorName: req.session.authorName,
         authors,
+        categories: CATEGORIES,
         article: { ...article, ...req.body },
         errors: ['Title and body are required.'],
       });

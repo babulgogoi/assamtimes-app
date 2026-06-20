@@ -27,11 +27,6 @@
   </label>
 
   <label>
-    Excerpt
-    <textarea name="excerpt" rows="2"><%= article ? (article.excerpt || '') : '' %></textarea>
-  </label>
-
-  <label>
     Body
     <textarea name="body" id="body" rows="14" required><%= article ? article.body : '' %></textarea>
   </label>
@@ -39,7 +34,12 @@
   <div class="admin-form-row">
     <label>
       Category
-      <input type="text" name="category" value="<%= article ? (article.category || '') : '' %>">
+      <select name="category">
+        <option value="">— None —</option>
+        <% categories.forEach(function (c) { %>
+          <option value="<%= c %>" <%= article && article.category === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
     </label>
 
     <label>
