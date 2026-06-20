@@ -34,10 +34,12 @@ if (!username || !password) {
   await page.goto(`${baseUrl}/admin/articles/new`);
   await page.waitForSelector('.tox-tinymce', { timeout: 15000 });
 
+  await page.screenshot({ path: '/tmp/tinymce-verify-toolbar.png' });
+
   const editorFrame = page.frameLocator('.tox-edit-area iframe');
   await editorFrame.locator('body').click();
   await editorFrame.locator('body').type('Hello from the TinyMCE test.');
-  await page.click('button[title="Bold"]');
+  await page.click('button[aria-label="Bold"]');
   await editorFrame.locator('body').type(' This part is bold.');
 
   await page.screenshot({ path: '/tmp/tinymce-verify.png', fullPage: true });
@@ -50,7 +52,7 @@ if (!username || !password) {
   console.log('Screenshot saved to /tmp/tinymce-verify.png');
 
   await browser.close();
-})().catch((err) => {
+})().catch(async (err) => {
   console.error('SCRIPT_ERROR:', err);
   process.exit(1);
 });
