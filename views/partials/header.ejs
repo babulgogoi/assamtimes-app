@@ -1,0 +1,15 @@
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="site-header__logo" href="/">Assam Times</a>
+    <nav class="site-header__nav">
+      <% if (typeof categories !== 'undefined') { %>
+        <% categories.forEach(function (c) { %>
+          <a href="/category/<%= encodeURIComponent(c.category) %>"><%= c.category %></a>
+        <% }) %>
+      <% } %>
+    </nav>
+    <form class="site-header__search" action="/search" method="get">
+      <input type="search" name="q" placeholder="Search...">
+    </form>
+  </div>
+</header>

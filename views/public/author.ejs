@@ -1,0 +1,51 @@
+<div class="home-layout">
+  <div class="home-main">
+    <div class="author-header">
+      <% if (author.photo) { %>
+        <img class="author-header__photo" src="<%= author.photo %>" alt="<%= author.display_name || author.username %>">
+      <% } %>
+      <div>
+        <h1 class="author-header__name"><%= author.display_name || author.username %></h1>
+        <% if (author.bio) { %>
+          <p class="author-header__bio"><%= author.bio %></p>
+        <% } %>
+      </div>
+    </div>
+
+    <% if (!articles.length) { %>
+      <p>This author hasn't published any articles yet.</p>
+    <% } else { %>
+      <div class="article-grid">
+        <% articles.forEach(function (article) { %>
+          <article class="article-card">
+            <a href="/article/<%= article.slug %>">
+              <% if (article.featured_image) { %>
+                <img class="article-card__image" src="<%= article.featured_image %>" alt="<%= article.title %>">
+              <% } %>
+              <h2 class="article-card__title"><%= article.title %></h2>
+            </a>
+            <p class="article-meta">
+              <% if (article.category) { %>
+                in <a href="/category/<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
+              <% } %>
+            </p>
+          </article>
+        <% }) %>
+      </div>
+
+      <nav class="pagination">
+        <% if (page > 1) { %>
+          <a href="/author/<%= encodeURIComponent(author.username) %>?page=<%= page - 1 %>">&laquo; Prev</a>
+        <% } %>
+        <span>Page <%= page %> of <%= totalPages %></span>
+        <% if (page < totalPages) { %>
+          <a href="/author/<%= encodeURIComponent(author.username) %>?page=<%= page + 1 %>">Next &raquo;</a>
+        <% } %>
+      </nav>
+    <% } %>
+  </div>
+
+  <aside class="home-sidebar">
+    <%- include('../partials/sidebar-most-read') %>
+  </aside>
+</div>

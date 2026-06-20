@@ -1,0 +1,280 @@
+.admin-login-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #f4f4f4;
+}
+
+.admin-login-form {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-login-form h1 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.admin-login-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.admin-login-form input {
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.admin-login-form button {
+  padding: 0.6rem;
+  font-size: 1rem;
+  background: #1a1a1a;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.admin-login-form__error {
+  color: #b00;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.admin-header__brand {
+  font-weight: bold;
+}
+
+.admin-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.admin-header__nav a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.admin-header__logout {
+  margin: 0;
+}
+
+.admin-header__logout button {
+  background: none;
+  border: 1px solid #fff;
+  color: #fff;
+  padding: 0.3rem 0.75rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.admin-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.admin-btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: #eee;
+  color: #1a1a1a;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.admin-btn--primary {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+
+.admin-btn--danger {
+  background: #fff;
+  color: #b00;
+  border-color: #b00;
+}
+
+.admin-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.admin-filter-bar {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-filter-bar input,
+.admin-filter-bar select {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: left;
+  padding: 0.6rem;
+  border-bottom: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.admin-table a {
+  color: #1a1a1a;
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.admin-badge--published {
+  background: #e3f6e8;
+  color: #1c7c3f;
+}
+
+.admin-badge--draft {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 800px;
+}
+
+.admin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.admin-form input[type="text"],
+.admin-form input[type="url"],
+.admin-form input[type="datetime-local"],
+.admin-form select,
+.admin-form textarea {
+  padding: 0.6rem;
+  font-size: 0.95rem;
+  font-weight: normal;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-family: inherit;
+}
+
+.admin-form-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-form-row label {
+  flex: 1;
+  min-width: 180px;
+}
+
+.admin-form-hint {
+  font-weight: normal;
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.admin-fieldset {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.admin-fieldset legend {
+  font-weight: bold;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.admin-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: normal;
+  margin: 0.5rem 0;
+}
+
+.admin-thumb {
+  max-width: 200px;
+  max-height: 120px;
+  object-fit: cover;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.admin-thumb--small {
+  max-width: 100px;
+  max-height: 70px;
+}
+
+.admin-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-gallery__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: normal;
+  font-size: 0.8rem;
+}
+
+.admin-form-errors {
+  background: #fdecea;
+  color: #b00;
+  padding: 0.75rem 1.25rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}

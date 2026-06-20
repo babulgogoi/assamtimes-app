@@ -1,0 +1,10 @@
+<%- include('ads-sidebar') %>
+
+<h3 class="home-sidebar__heading">Most Read</h3>
+<ol class="most-read-list">
+  <% mostViewed.forEach(function (article) { %>
+    <li>
+      <a href="/article/<%= article.slug %>"><%= article.title %></a>
+    </li>
+  <% }) %>
+</ol>

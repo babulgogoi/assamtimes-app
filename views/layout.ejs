@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title : 'Assam Times' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <% if (typeof adsenseClientId !== 'undefined' && adsenseClientId) { %>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=<%= adsenseClientId %>" crossorigin="anonymous"></script>
+  <% } %>
+</head>
+<body>
+  <%- include('partials/ads-header') %>
+  <%- include('partials/header') %>
+
+  <main class="site-main">
+    <%- body %>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

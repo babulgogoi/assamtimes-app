@@ -1,0 +1,58 @@
+<div class="admin-list-header">
+  <h1>Articles</h1>
+  <a class="admin-btn admin-btn--primary" href="/admin/articles/new">+ New Article</a>
+</div>
+
+<form class="admin-filter-bar" method="get" action="/admin/articles">
+  <input type="text" name="q" placeholder="Search by title..." value="<%= q %>">
+  <select name="status">
+    <option value="">All statuses</option>
+    <option value="published" <%= status === 'published' ? 'selected' : '' %>>Published</option>
+    <option value="draft" <%= status === 'draft' ? 'selected' : '' %>>Draft</option>
+  </select>
+  <button type="submit" class="admin-btn">Filter</button>
+</form>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Category</th>
+      <th>Status</th>
+      <th>Author</th>
+      <th>Published</th>
+      <th>Views</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% articles.forEach(function (article) { %>
+      <tr>
+        <td><a href="/admin/articles/<%= article.id %>/edit"><%= article.title %></a></td>
+        <td><%= article.category || '—' %></td>
+        <td><span class="admin-badge admin-badge--<%= article.status %>"><%= article.status %></span></td>
+        <td><%= article.author_name || '—' %></td>
+        <td><%= article.published_at ? new Date(article.published_at).toLocaleDateString('en-IN') : '—' %></td>
+        <td><%= article.views_count %></td>
+        <td>
+          <form method="post" action="/admin/articles/<%= article.id %>/delete" onsubmit="return confirm('Delete this article? This cannot be undone.');">
+            <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+    <% if (!articles.length) { %>
+      <tr><td colspan="7">No articles found.</td></tr>
+    <% } %>
+  </tbody>
+</table>
+
+<nav class="pagination">
+  <% if (page > 1) { %>
+    <a href="/admin/articles?q=<%= encodeURIComponent(q) %>&status=<%= encodeURIComponent(status) %>&page=<%= page - 1 %>">&laquo; Prev</a>
+  <% } %>
+  <span>Page <%= page %> of <%= totalPages %></span>
+  <% if (page < totalPages) { %>
+    <a href="/admin/articles?q=<%= encodeURIComponent(q) %>&status=<%= encodeURIComponent(status) %>&page=<%= page + 1 %>">Next &raquo;</a>
+  <% } %>
+</nav>

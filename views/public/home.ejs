@@ -1,0 +1,52 @@
+<div class="home-layout">
+  <div class="home-main">
+
+    <% if (lead) { %>
+      <article class="lead-story">
+        <a href="/article/<%= lead.slug %>">
+          <% if (lead.featured_image) { %>
+            <img class="lead-story__image" src="<%= lead.featured_image %>" alt="<%= lead.title %>">
+          <% } %>
+          <h1 class="lead-story__title"><%= lead.title %></h1>
+        </a>
+        <% if (lead.excerpt) { %>
+          <p class="lead-story__excerpt"><%= lead.excerpt %></p>
+        <% } %>
+        <p class="article-meta">
+          <% if (lead.author_username) { %>
+            by <a href="/author/<%= encodeURIComponent(lead.author_username) %>"><%= lead.author_name %></a>
+          <% } %>
+          <% if (lead.category) { %>
+            in <a href="/category/<%= encodeURIComponent(lead.category) %>"><%= lead.category %></a>
+          <% } %>
+        </p>
+      </article>
+    <% } %>
+
+    <div class="article-grid">
+      <% grid.forEach(function (article) { %>
+        <article class="article-card">
+          <a href="/article/<%= article.slug %>">
+            <% if (article.featured_image) { %>
+              <img class="article-card__image" src="<%= article.featured_image %>" alt="<%= article.title %>">
+            <% } %>
+            <h2 class="article-card__title"><%= article.title %></h2>
+          </a>
+          <p class="article-meta">
+            <% if (article.author_username) { %>
+              by <a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a>
+            <% } %>
+            <% if (article.category) { %>
+              in <a href="/category/<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
+            <% } %>
+          </p>
+        </article>
+      <% }) %>
+    </div>
+
+  </div>
+
+  <aside class="home-sidebar">
+    <%- include('../partials/sidebar-most-read') %>
+  </aside>
+</div>

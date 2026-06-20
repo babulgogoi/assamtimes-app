@@ -1,0 +1,80 @@
+<div class="home-layout">
+  <div class="home-main">
+    <article class="article-detail">
+      <% if (article.category) { %>
+        <a href="/category/<%= encodeURIComponent(article.category) %>" class="article-category"><%= article.category %></a>
+      <% } %>
+
+      <h1 class="article-detail__title"><%= article.title %></h1>
+
+      <p class="article-meta">
+        <% if (article.author_username) { %>
+          by <a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a> &middot;
+        <% } %>
+        <% if (article.published_at) { %>
+          <%= new Date(article.published_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }) %> &middot;
+        <% } %>
+        <%= article.views_count %> views
+      </p>
+
+      <% if (article.featured_image) { %>
+        <img class="article-detail__image" src="<%= article.featured_image %>" alt="<%= article.title %>">
+      <% } %>
+
+      <% if (article.excerpt) { %>
+        <p class="article-detail__excerpt"><%= article.excerpt %></p>
+      <% } %>
+
+      <div class="article-detail__body">
+        <%- article.body %>
+      </div>
+
+      <%- include('../partials/ads-in-article') %>
+
+      <% if (article.gallery_images && article.gallery_images.length) { %>
+        <div class="article-gallery">
+          <% article.gallery_images.forEach(function (img) { %>
+            <img src="<%= img %>" alt="<%= article.title %>">
+          <% }) %>
+        </div>
+      <% } %>
+
+      <% if (article.audio_file) { %>
+        <audio class="article-detail__audio" controls src="<%= article.audio_file %>"></audio>
+      <% } %>
+
+      <% if (article.pdf_file) { %>
+        <p><a href="<%= article.pdf_file %>" target="_blank" rel="noopener">Download PDF</a></p>
+      <% } %>
+
+      <% if (article.video_url) { %>
+        <p><a href="<%= article.video_url %>" target="_blank" rel="noopener">Watch video</a></p>
+      <% } %>
+    </article>
+  </div>
+
+  <aside class="home-sidebar">
+    <%- include('../partials/ads-sidebar') %>
+
+    <% if (article.author_username) { %>
+      <div class="author-box">
+        <% if (article.author_photo) { %>
+          <img class="author-box__photo" src="<%= article.author_photo %>" alt="<%= article.author_name %>">
+        <% } %>
+        <h3><a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a></h3>
+        <% if (article.author_bio) { %>
+          <p class="author-box__bio"><%= article.author_bio %></p>
+        <% } %>
+      </div>
+    <% } %>
+
+    <% if (related.length) { %>
+      <h3 class="home-sidebar__heading">Related</h3>
+      <ol class="most-read-list">
+        <% related.forEach(function (r) { %>
+          <li><a href="/article/<%= r.slug %>"><%= r.title %></a></li>
+        <% }) %>
+      </ol>
+    <% } %>
+  </aside>
+</div>

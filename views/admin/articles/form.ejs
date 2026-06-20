@@ -1,0 +1,161 @@
+<%
+  function toDatetimeLocal(d) {
+    if (!d) return '';
+    var date = new Date(d);
+    var pad = function (n) { return n < 10 ? '0' + n : n; };
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+  }
+%>
+<h1><%= article ? 'Edit Article' : 'New Article' %></h1>
+
+<% if (errors && errors.length) { %>
+  <ul class="admin-form-errors">
+    <% errors.forEach(function (e) { %><li><%= e %></li><% }) %>
+  </ul>
+<% } %>
+
+<form class="admin-form" method="post" action="<%= article ? '/admin/articles/' + article.id : '/admin/articles' %>" enctype="multipart/form-data">
+
+  <label>
+    Title
+    <input type="text" name="title" value="<%= article ? article.title : '' %>" required>
+  </label>
+
+  <label>
+    Slug <span class="admin-form-hint">(leave blank to auto-generate from title)</span>
+    <input type="text" name="slug" value="<%= article ? article.slug : '' %>">
+  </label>
+
+  <label>
+    Excerpt
+    <textarea name="excerpt" rows="2"><%= article ? (article.excerpt || '') : '' %></textarea>
+  </label>
+
+  <label>
+    Body
+    <textarea name="body" id="body" rows="14" required><%= article ? article.body : '' %></textarea>
+  </label>
+
+  <div class="admin-form-row">
+    <label>
+      Category
+      <input type="text" name="category" value="<%= article ? (article.category || '') : '' %>">
+    </label>
+
+    <label>
+      Status
+      <select name="status">
+        <option value="draft" <%= article && article.status === 'draft' ? 'selected' : '' %>>Draft</option>
+        <option value="published" <%= !article || article.status === 'published' ? 'selected' : '' %>>Published</option>
+      </select>
+    </label>
+
+    <label>
+      Published At
+      <input type="datetime-local" name="published_at" value="<%= article ? toDatetimeLocal(article.published_at) : '' %>">
+    </label>
+  </div>
+
+  <label>
+    Video URL
+    <input type="url" name="video_url" value="<%= article ? (article.video_url || '') : '' %>">
+  </label>
+
+  <fieldset class="admin-fieldset">
+    <legend>Author</legend>
+    <label>
+      Existing author
+      <select name="author_id" id="author_id">
+        <option value="">— None —</option>
+        <% authors.forEach(function (a) { %>
+          <option value="<%= a.id %>" <%= article && String(article.author_id) === String(a.id) ? 'selected' : '' %>><%= a.display_name || a.username %></option>
+        <% }) %>
+        <option value="__new__">+ Add New Author</option>
+      </select>
+    </label>
+    <div id="new-author-fields" class="admin-form-row" style="display:none;">
+      <label>
+        New author username
+        <input type="text" name="new_author_username" id="new_author_username">
+      </label>
+      <label>
+        New author display name
+        <input type="text" name="new_author_display_name">
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="admin-fieldset">
+    <legend>Featured Image</legend>
+    <% if (article && article.featured_image) { %>
+      <img class="admin-thumb" src="<%= article.featured_image %>" alt="">
+      <label class="admin-checkbox"><input type="checkbox" name="remove_featured_image" value="1"> Remove current image</label>
+      <input type="hidden" name="existing_featured_image" value="<%= article.featured_image %>">
+    <% } %>
+    <input type="file" name="featured_image" accept="image/*">
+  </fieldset>
+
+  <fieldset class="admin-fieldset">
+    <legend>Gallery Images</legend>
+    <% if (article && article.gallery_images && article.gallery_images.length) { %>
+      <div class="admin-gallery">
+        <% article.gallery_images.forEach(function (img) { %>
+          <label class="admin-gallery__item">
+            <img class="admin-thumb admin-thumb--small" src="<%= img %>" alt="">
+            <span><input type="checkbox" name="existing_gallery_images" value="<%= img %>" checked> Keep</span>
+          </label>
+        <% }) %>
+      </div>
+    <% } %>
+    <input type="file" name="gallery_images" accept="image/*" multiple>
+  </fieldset>
+
+  <fieldset class="admin-fieldset">
+    <legend>Audio File</legend>
+    <% if (article && article.audio_file) { %>
+      <p><a href="<%= article.audio_file %>" target="_blank" rel="noopener"><%= article.audio_file %></a></p>
+      <label class="admin-checkbox"><input type="checkbox" name="remove_audio_file" value="1"> Remove current audio</label>
+      <input type="hidden" name="existing_audio_file" value="<%= article.audio_file %>">
+    <% } %>
+    <input type="file" name="audio_file" accept="audio/*">
+  </fieldset>
+
+  <fieldset class="admin-fieldset">
+    <legend>PDF File</legend>
+    <% if (article && article.pdf_file) { %>
+      <p><a href="<%= article.pdf_file %>" target="_blank" rel="noopener"><%= article.pdf_file %></a></p>
+      <label class="admin-checkbox"><input type="checkbox" name="remove_pdf_file" value="1"> Remove current PDF</label>
+      <input type="hidden" name="existing_pdf_file" value="<%= article.pdf_file %>">
+    <% } %>
+    <input type="file" name="pdf_file" accept="application/pdf">
+  </fieldset>
+
+  <button type="submit" class="admin-btn admin-btn--primary"><%= article ? 'Save Changes' : 'Create Article' %></button>
+</form>
+
+<script src="/vendor/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+  tinymce.init({
+    selector: '#body',
+    license_key: 'gpl',
+    height: 500,
+    menubar: false,
+    promotion: false,
+    plugins: 'lists link image table code fullscreen wordcount',
+    toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist | blockquote link image table | code fullscreen',
+  });
+
+  (function () {
+    var authorSelect = document.getElementById('author_id');
+    var newAuthorFields = document.getElementById('new-author-fields');
+    function toggleNewAuthor() {
+      var isNew = authorSelect.value === '__new__';
+      newAuthorFields.style.display = isNew ? 'flex' : 'none';
+      if (!isNew) {
+        document.getElementById('new_author_username').value = '';
+      }
+    }
+    authorSelect.addEventListener('change', toggleNewAuthor);
+    toggleNewAuthor();
+  })();
+</script>

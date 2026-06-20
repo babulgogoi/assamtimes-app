@@ -1,0 +1,12 @@
+<% if (typeof adsenseClientId !== 'undefined' && adsenseClientId) { %>
+  <div class="ad-slot ad-slot--header">
+    <span class="ad-slot__label">Advertisement</span>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="<%= adsenseClientId %>"
+         data-ad-slot="<%= adsenseSlotHeader %>"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
+<% } %>
