@@ -50,6 +50,7 @@ async function articleDetail(req, res, next) {
       article,
       related,
       categories,
+      isAdmin: !!(req.session && req.session.authorId),
     });
   } catch (err) {
     next(err);
