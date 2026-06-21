@@ -10,6 +10,7 @@
 <table class="admin-table" id="authorsTable">
   <thead>
     <tr>
+      <th></th>
       <th>Username</th>
       <th>Display Name</th>
       <th>Articles</th>
@@ -19,6 +20,7 @@
   <tbody>
     <% authors.forEach(function (author) { %>
       <tr data-username="<%= author.username.toLowerCase() %>" data-display-name="<%= (author.display_name || '').toLowerCase() %>">
+        <td><img class="admin-thumb admin-thumb--small" src="<%= author.photo || '/uploads/defaults/avatar.png' %>" alt=""></td>
         <td><a href="/admin/authors/<%= author.id %>/edit"><%= author.username %></a></td>
         <td><%= author.display_name || '—' %></td>
         <td><%= author.article_count %></td>
@@ -26,7 +28,7 @@
       </tr>
     <% }) %>
     <% if (!authors.length) { %>
-      <tr><td colspan="4">No authors found.</td></tr>
+      <tr><td colspan="5">No authors found.</td></tr>
     <% } %>
   </tbody>
 </table>
