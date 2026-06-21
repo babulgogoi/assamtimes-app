@@ -6,7 +6,12 @@
     return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
   }
 %>
-<h1><%= article ? 'Edit Article' : 'New Article' %></h1>
+<div class="admin-list-header">
+  <h1><%= article ? 'Edit Article' : 'New Article' %></h1>
+  <% if (article && article.status === 'published') { %>
+    <a class="admin-btn admin-btn--primary" href="/article/<%= article.slug %>" target="_blank" rel="noopener">View Article</a>
+  <% } %>
+</div>
 
 <% if (errors && errors.length) { %>
   <ul class="admin-form-errors">
