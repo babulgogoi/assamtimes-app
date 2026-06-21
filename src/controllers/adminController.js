@@ -17,15 +17,17 @@ function cleanupReplacedFiles(oldArticle, newData) {
   if (oldArticle.pdf_file && oldArticle.pdf_file !== newData.pdf_file) {
     deleteUploadedFile(oldArticle.pdf_file);
   }
-  const newGallery = newData.gallery_images || [];
-  (oldArticle.gallery_images || []).filter((img) => !newGallery.includes(img)).forEach(deleteUploadedFile);
+  const newGalleryUrls = (newData.gallery_images || []).map((img) => img.url);
+  (oldArticle.gallery_images || [])
+    .filter((img) => !newGalleryUrls.includes(img.url))
+    .forEach((img) => deleteUploadedFile(img.url));
 }
 
 function cleanupAllFiles(article) {
   if (article.featured_image) deleteUploadedFile(article.featured_image);
   if (article.audio_file) deleteUploadedFile(article.audio_file);
   if (article.pdf_file) deleteUploadedFile(article.pdf_file);
-  (article.gallery_images || []).forEach(deleteUploadedFile);
+  (article.gallery_images || []).forEach((img) => deleteUploadedFile(img.url));
 }
 
 function loginForm(req, res) {
@@ -198,14 +200,28 @@ async function buildArticleData(req, existingArticle = null) {
     data.pdf_file = body.existing_pdf_file || null;
   }
 
+  // Existing gallery images are submitted as indexed fields (gallery_url_0,
+  // gallery_keep_0, gallery_caption_0, ...) rather than a same-named array,
+  // so unchecking "Keep" on one doesn't disturb the caption/url pairing of
+  // the others.
   let gallery = [];
-  if (body.existing_gallery_images) {
-    gallery = Array.isArray(body.existing_gallery_images)
-      ? body.existing_gallery_images
-      : [body.existing_gallery_images];
-  }
+  const galleryIndexes = new Set();
+  Object.keys(body).forEach((key) => {
+    const m = key.match(/^gallery_url_(\d+)$/);
+    if (m) galleryIndexes.add(Number(m[1]));
+  });
+  Array.from(galleryIndexes).sort((a, b) => a - b).forEach((idx) => {
+    if (body[`gallery_keep_${idx}`]) {
+      gallery.push({
+        url: body[`gallery_url_${idx}`],
+        caption: (body[`gallery_caption_${idx}`] || '').trim(),
+      });
+    }
+  });
   if (files.gallery_images) {
-    gallery = gallery.concat(files.gallery_images.map((f) => urlFor('gallery_images', f.filename)));
+    gallery = gallery.concat(
+      files.gallery_images.map((f) => ({ url: urlFor('gallery_images', f.filename), caption: '' }))
+    );
   }
   data.gallery_images = gallery;
 

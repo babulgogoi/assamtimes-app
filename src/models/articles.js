@@ -231,7 +231,7 @@ async function create(data) {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())
      RETURNING id`,
     [
-      data.slug, data.title, data.body, data.featured_image, data.gallery_images,
+      data.slug, data.title, data.body, data.featured_image, JSON.stringify(data.gallery_images || []),
       data.video_url, data.audio_file, data.pdf_file, data.author_id, data.category, data.status,
       data.published_at,
     ]
@@ -247,7 +247,7 @@ async function update(id, data) {
        published_at = $12, updated_at = now()
      WHERE id = $13`,
     [
-      data.slug, data.title, data.body, data.featured_image, data.gallery_images,
+      data.slug, data.title, data.body, data.featured_image, JSON.stringify(data.gallery_images || []),
       data.video_url, data.audio_file, data.pdf_file, data.author_id, data.category, data.status,
       data.published_at, id,
     ]

@@ -39,10 +39,29 @@
       <%- include('../partials/ads-in-article') %>
 
       <% if (article.gallery_images && article.gallery_images.length) { %>
-        <div class="article-gallery">
-          <% article.gallery_images.forEach(function (img) { %>
-            <img src="<%= img %>" alt="<%= article.title %>">
-          <% }) %>
+        <% if (article.gallery_images.length === 1) { %>
+          <% var soloImg = article.gallery_images[0]; %>
+          <div class="article-gallery article-gallery--single">
+            <img class="gallery-lightbox-trigger" src="<%= soloImg.url %>" alt="<%= soloImg.caption || article.title %>" data-index="0">
+          </div>
+        <% } else { %>
+          <div class="article-gallery article-gallery--masonry">
+            <% article.gallery_images.forEach(function (galleryImg, idx) { %>
+              <img class="gallery-lightbox-trigger" src="<%= galleryImg.url %>" alt="<%= galleryImg.caption || article.title %>" data-index="<%= idx %>">
+            <% }) %>
+          </div>
+        <% } %>
+
+        <script type="application/json" id="galleryData"><%- JSON.stringify(article.gallery_images).replace(/</g, '\\u003c') %></script>
+
+        <div class="gallery-lightbox" id="galleryLightbox" hidden>
+          <button class="gallery-lightbox__close" id="galleryLightboxClose" type="button" aria-label="Close">&times;</button>
+          <button class="gallery-lightbox__nav gallery-lightbox__nav--prev" id="galleryLightboxPrev" type="button" aria-label="Previous">&#8249;</button>
+          <figure class="gallery-lightbox__figure">
+            <img class="gallery-lightbox__image" id="galleryLightboxImage" src="" alt="">
+            <figcaption class="gallery-lightbox__caption" id="galleryLightboxCaption"></figcaption>
+          </figure>
+          <button class="gallery-lightbox__nav gallery-lightbox__nav--next" id="galleryLightboxNext" type="button" aria-label="Next">&#8250;</button>
         </div>
       <% } %>
 

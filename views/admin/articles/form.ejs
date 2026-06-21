@@ -104,11 +104,13 @@
     <legend>Gallery Images</legend>
     <% if (article && article.gallery_images && article.gallery_images.length) { %>
       <div class="admin-gallery">
-        <% article.gallery_images.forEach(function (img) { %>
-          <label class="admin-gallery__item">
-            <img class="admin-thumb admin-thumb--small" src="<%= img %>" alt="">
-            <span><input type="checkbox" name="existing_gallery_images" value="<%= img %>" checked> Keep</span>
-          </label>
+        <% article.gallery_images.forEach(function (img, idx) { %>
+          <div class="admin-gallery__item">
+            <img class="admin-thumb admin-thumb--small" src="<%= img.url %>" alt="">
+            <input type="hidden" name="gallery_url_<%= idx %>" value="<%= img.url %>">
+            <label class="admin-checkbox"><input type="checkbox" name="gallery_keep_<%= idx %>" value="1" checked> Keep</label>
+            <input type="text" name="gallery_caption_<%= idx %>" value="<%= img.caption || '' %>" placeholder="Caption (optional)">
+          </div>
         <% }) %>
       </div>
     <% } %>
