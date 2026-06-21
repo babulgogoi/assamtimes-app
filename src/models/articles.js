@@ -46,7 +46,7 @@ async function getBySlug(slug) {
     `SELECT
        a.id, a.slug, a.title, a.body, a.excerpt, a.featured_image, a.gallery_images,
        a.video_url, a.audio_file, a.pdf_file, a.category, a.status,
-       a.published_at, a.views_count,
+       a.published_at, a.views_count, a.likes_count,
        au.username AS author_username, au.display_name AS author_name,
        au.bio AS author_bio, au.photo AS author_photo
      FROM articles a
@@ -71,6 +71,14 @@ async function getRelatedByCategory({ category, excludeId, limit }) {
 
 async function incrementViewCount(id) {
   await pool.query('UPDATE articles SET views_count = views_count + 1 WHERE id = $1', [id]);
+}
+
+async function incrementLikeCount(id) {
+  const { rows } = await pool.query(
+    'UPDATE articles SET likes_count = likes_count + 1 WHERE id = $1 RETURNING likes_count',
+    [id]
+  );
+  return rows[0] ? Number(rows[0].likes_count) : null;
 }
 
 async function getByCategory({ category, limit, offset = 0 }) {
@@ -257,6 +265,7 @@ module.exports = {
   getBySlug,
   getRelatedByCategory,
   incrementViewCount,
+  incrementLikeCount,
   getByCategory,
   countByCategory,
   getByAuthorId,

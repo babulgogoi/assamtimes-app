@@ -436,6 +436,85 @@ body {
   color: #555;
 }
 
+.article-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.5rem 0 0;
+  padding: 1rem 0;
+  border-top: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+}
+
+.like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.like-btn:hover {
+  border-color: #FF6600;
+  color: #FF6600;
+}
+
+.like-btn.is-liked {
+  border-color: #e0245e;
+  color: #e0245e;
+  background: #fdecf0;
+}
+
+.like-btn:disabled {
+  cursor: default;
+}
+
+.share-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.share-links__label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-right: 0.25rem;
+}
+
+.share-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.share-icon--facebook { background: #1877f2; }
+.share-icon--x { background: #000; }
+.share-icon--linkedin { background: #0a66c2; }
+.share-icon--instagram { background: #c8336e; }
+.share-icon--copy { background: #555; }
+
+.share-icon:hover {
+  opacity: 0.85;
+}
+
+.share-icon.is-copied {
+  outline: 2px solid #1a1a1a;
+}
+
 .not-found {
   text-align: center;
   padding: 3rem 0;

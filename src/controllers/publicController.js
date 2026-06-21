@@ -83,7 +83,22 @@ async function articleDetail(req, res, next) {
       article,
       related,
       isAdmin: !!(req.session && req.session.authorId),
+      canonicalUrl: `${process.env.SITE_URL}/article/${article.slug}`,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function likeArticle(req, res, next) {
+  try {
+    const article = await articlesModel.getBySlug(req.params.slug);
+    if (!article || article.status !== 'published') {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const likes = await articlesModel.incrementLikeCount(article.id);
+    res.json({ likes });
   } catch (err) {
     next(err);
   }
@@ -210,6 +225,7 @@ module.exports = {
   home,
   newsPage,
   articleDetail,
+  likeArticle,
   categoryPage,
   authorPage,
   searchPage,
