@@ -140,7 +140,7 @@ async function resolveAuthorId(body) {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-async function buildArticleData(req) {
+async function buildArticleData(req, existingArticle = null) {
   const body = req.body;
   const files = req.files || {};
 
@@ -165,7 +165,13 @@ async function buildArticleData(req) {
     author_id: authorId,
     category: body.category || null,
     status: body.status === 'draft' ? 'draft' : 'published',
-    published_at: body.published_at ? new Date(body.published_at) : new Date(),
+    // Falling back to now() unconditionally here used to silently bump an existing
+    // article's published_at on any save where the field came back empty — fall back
+    // to the article's own existing value on updates instead, and only default to
+    // now() when there's genuinely no prior value (a brand-new article).
+    published_at: body.published_at
+      ? new Date(body.published_at)
+      : (existingArticle ? existingArticle.published_at : new Date()),
   };
 
   if (files.featured_image && files.featured_image[0]) {
@@ -249,7 +255,7 @@ async function updateArticle(req, res, next) {
       });
     }
 
-    const data = await buildArticleData(req);
+    const data = await buildArticleData(req, article);
     await articlesModel.update(article.id, data);
     cleanupReplacedFiles(article, data);
     res.redirect(`/admin/articles/${article.id}/edit`);
