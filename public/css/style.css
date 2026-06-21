@@ -259,6 +259,13 @@ body {
 
   .site-header__search {
     order: 3;
+    flex-basis: 100%;
+    margin-top: 0.75rem;
+  }
+
+  .site-header__search input {
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .lead-story__overlay {
