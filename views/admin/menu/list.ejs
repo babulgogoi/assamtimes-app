@@ -1,0 +1,42 @@
+<div class="admin-list-header">
+  <h1>Menu</h1>
+  <a class="admin-btn admin-btn--primary" href="/admin/menu/new">+ New Menu Item</a>
+</div>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Sort</th>
+      <th>Label</th>
+      <th>Links To</th>
+      <th>Active</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% items.forEach(function (item) { %>
+      <tr>
+        <td><%= item.sort_order %></td>
+        <td><a href="/admin/menu/<%= item.id %>/edit"><%= item.label %></a></td>
+        <td>
+          <% if (item.page_id) { %>
+            Page: <%= item.page_title %>
+          <% } else if (item.custom_url) { %>
+            <%= item.custom_url %>
+          <% } else { %>
+            <span class="admin-form-hint">(not linked yet)</span>
+          <% } %>
+        </td>
+        <td><%= item.is_active ? 'Yes' : 'No' %></td>
+        <td>
+          <form method="post" action="/admin/menu/<%= item.id %>/delete" onsubmit="return confirm('Delete this menu item?');">
+            <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+    <% if (!items.length) { %>
+      <tr><td colspan="5">No menu items found.</td></tr>
+    <% } %>
+  </tbody>
+</table>

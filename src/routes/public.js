@@ -1,12 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const publicController = require('../controllers/publicController');
+const menuItemsModel = require('../models/menuItems');
 
-router.use((req, res, next) => {
+router.use(async (req, res, next) => {
   res.locals.adsenseClientId = process.env.ADSENSE_CLIENT_ID;
   res.locals.adsenseSlotHeader = process.env.ADSENSE_SLOT_HEADER;
   res.locals.adsenseSlotSidebar = process.env.ADSENSE_SLOT_SIDEBAR;
   res.locals.adsenseSlotInArticle = process.env.ADSENSE_SLOT_IN_ARTICLE;
+  try {
+    res.locals.menuItems = await menuItemsModel.getActiveOrdered();
+  } catch (err) {
+    return next(err);
+  }
   next();
 });
 

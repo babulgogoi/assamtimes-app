@@ -9,10 +9,9 @@ const SEARCH_MIN_LENGTH = 2;
 
 async function home(req, res, next) {
   try {
-    const [latest, mostViewed, categories] = await Promise.all([
+    const [latest, mostViewed] = await Promise.all([
       articlesModel.getLatestPublished({ limit: 9 }),
       articlesModel.getMostViewed({ limit: 5 }),
-      articlesModel.getTopCategories({ limit: 8 }),
     ]);
 
     const [lead, ...grid] = latest;
@@ -22,7 +21,6 @@ async function home(req, res, next) {
       lead,
       grid,
       mostViewed,
-      categories,
     });
   } catch (err) {
     next(err);
@@ -37,10 +35,11 @@ async function articleDetail(req, res, next) {
       return res.status(404).render('public/404', { title: 'Article Not Found' });
     }
 
-    const [related, categories] = await Promise.all([
-      articlesModel.getRelatedByCategory({ category: article.category, excludeId: article.id, limit: 5 }),
-      articlesModel.getTopCategories({ limit: 8 }),
-    ]);
+    const related = await articlesModel.getRelatedByCategory({
+      category: article.category,
+      excludeId: article.id,
+      limit: 5,
+    });
 
     articlesModel.incrementViewCount(article.id).catch((err) => {
       console.error('Failed to increment view count for article', article.id, err);
@@ -50,7 +49,6 @@ async function articleDetail(req, res, next) {
       title: article.title,
       article,
       related,
-      categories,
       isAdmin: !!(req.session && req.session.authorId),
     });
   } catch (err) {
@@ -64,10 +62,9 @@ async function categoryPage(req, res, next) {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const offset = (page - 1) * CATEGORY_PAGE_SIZE;
 
-    const [articles, total, categories, mostViewed] = await Promise.all([
+    const [articles, total, mostViewed] = await Promise.all([
       articlesModel.getByCategory({ category, limit: CATEGORY_PAGE_SIZE, offset }),
       articlesModel.countByCategory(category),
-      articlesModel.getTopCategories({ limit: 8 }),
       articlesModel.getMostViewed({ limit: 5 }),
     ]);
 
@@ -77,7 +74,6 @@ async function categoryPage(req, res, next) {
       title: `${category} — Assam Times`,
       category,
       articles,
-      categories,
       mostViewed,
       page,
       totalPages,
@@ -98,10 +94,9 @@ async function authorPage(req, res, next) {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const offset = (page - 1) * AUTHOR_PAGE_SIZE;
 
-    const [articles, total, categories, mostViewed] = await Promise.all([
+    const [articles, total, mostViewed] = await Promise.all([
       articlesModel.getByAuthorId({ authorId: author.id, limit: AUTHOR_PAGE_SIZE, offset }),
       articlesModel.countByAuthorId(author.id),
-      articlesModel.getTopCategories({ limit: 8 }),
       articlesModel.getMostViewed({ limit: 5 }),
     ]);
 
@@ -111,7 +106,6 @@ async function authorPage(req, res, next) {
       title: `${author.display_name || author.username} — Assam Times`,
       author,
       articles,
-      categories,
       mostViewed,
       page,
       totalPages,
@@ -124,17 +118,13 @@ async function authorPage(req, res, next) {
 async function searchPage(req, res, next) {
   try {
     const q = (req.query.q || '').trim();
-    const [categories, mostViewed] = await Promise.all([
-      articlesModel.getTopCategories({ limit: 8 }),
-      articlesModel.getMostViewed({ limit: 5 }),
-    ]);
+    const mostViewed = await articlesModel.getMostViewed({ limit: 5 });
 
     if (q.length < SEARCH_MIN_LENGTH) {
       return res.render('public/search', {
         title: 'Search — Assam Times',
         q,
         articles: [],
-        categories,
         mostViewed,
         page: 1,
         totalPages: 1,
@@ -156,7 +146,6 @@ async function searchPage(req, res, next) {
       title: `Search: ${q} — Assam Times`,
       q,
       articles,
-      categories,
       mostViewed,
       page,
       totalPages,

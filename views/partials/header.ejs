@@ -4,9 +4,11 @@
       <img src="/uploads/branding/logo.jpg" alt="Assam Times">
     </a>
     <nav class="site-header__nav">
-      <% if (typeof categories !== 'undefined') { %>
-        <% categories.forEach(function (c) { %>
-          <a href="/category/<%= encodeURIComponent(c.category) %>"><%= c.category %></a>
+      <% if (typeof menuItems !== 'undefined') { %>
+        <% menuItems.forEach(function (item) { %>
+          <% if (item.url) { %>
+            <a href="<%= item.url %>"><%= item.label %></a>
+          <% } %>
         <% }) %>
       <% } %>
     </nav>

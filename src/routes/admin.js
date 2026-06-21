@@ -4,6 +4,7 @@ const router = express.Router();
 const adminController = require('../controllers/adminController');
 const adminAuthorsController = require('../controllers/adminAuthorsController');
 const adminPagesController = require('../controllers/adminPagesController');
+const adminMenuController = require('../controllers/adminMenuController');
 const { requireAuth } = require('../middleware/auth');
 const { uploadArticleFiles } = require('../middleware/upload');
 
@@ -42,5 +43,12 @@ router.post('/pages', adminPagesController.createPage);
 router.get('/pages/:id/edit', adminPagesController.editPageForm);
 router.post('/pages/:id', adminPagesController.updatePage);
 router.post('/pages/:id/delete', adminPagesController.deletePage);
+
+router.get('/menu', adminMenuController.listMenuItems);
+router.get('/menu/new', adminMenuController.newMenuItemForm);
+router.post('/menu', adminMenuController.createMenuItem);
+router.get('/menu/:id/edit', adminMenuController.editMenuItemForm);
+router.post('/menu/:id', adminMenuController.updateMenuItem);
+router.post('/menu/:id/delete', adminMenuController.deleteMenuItem);
 
 module.exports = router;

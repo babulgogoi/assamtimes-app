@@ -1,0 +1,53 @@
+<h1><%= item ? 'Edit Menu Item' : 'New Menu Item' %></h1>
+
+<% if (errors && errors.length) { %>
+  <ul class="admin-form-errors">
+    <% errors.forEach(function (e) { %><li><%= e %></li><% }) %>
+  </ul>
+<% } %>
+
+<form class="admin-form" method="post" action="<%= item && item.id ? '/admin/menu/' + item.id : '/admin/menu' %>">
+  <label>
+    Label
+    <input type="text" name="label" value="<%= item ? item.label : '' %>" required>
+  </label>
+
+  <label>
+    Link to page <span class="admin-form-hint">(takes priority over Custom URL below if set)</span>
+    <select name="page_id">
+      <option value="">— None / use Custom URL —</option>
+      <% pages.forEach(function (p) { %>
+        <option value="<%= p.id %>" <%= item && String(item.page_id) === String(p.id) ? 'selected' : '' %>><%= p.title %> (<%= p.status %>)</option>
+      <% }) %>
+    </select>
+  </label>
+
+  <label>
+    Custom URL <span class="admin-form-hint">(e.g. /category/Sports, or any external link)</span>
+    <input type="text" name="custom_url" value="<%= item ? (item.custom_url || '') : '' %>">
+  </label>
+
+  <div class="admin-form-row">
+    <label>
+      Sort Order
+      <input type="number" name="sort_order" value="<%= item ? item.sort_order : 0 %>">
+    </label>
+
+    <label>
+      Parent <span class="admin-form-hint">(reserved for future submenus)</span>
+      <select name="parent_id">
+        <option value="">— None (top-level) —</option>
+        <% items.forEach(function (i) { %>
+          <option value="<%= i.id %>" <%= item && String(item.parent_id) === String(i.id) ? 'selected' : '' %>><%= i.label %></option>
+        <% }) %>
+      </select>
+    </label>
+  </div>
+
+  <label class="admin-checkbox">
+    <input type="checkbox" name="is_active" <%= !item || item.is_active ? 'checked' : '' %>>
+    Active (shown in the site nav)
+  </label>
+
+  <button type="submit" class="admin-btn admin-btn--primary"><%= item ? 'Save Changes' : 'Create Menu Item' %></button>
+</form>

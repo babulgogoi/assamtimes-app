@@ -36,19 +36,6 @@ async function getMostViewed({ limit }) {
   return rows;
 }
 
-async function getTopCategories({ limit }) {
-  const { rows } = await pool.query(
-    `SELECT category, COUNT(*) AS article_count
-     FROM articles
-     WHERE status = 'published' AND category IS NOT NULL AND category <> ''
-     GROUP BY category
-     ORDER BY article_count DESC
-     LIMIT $1`,
-    [limit]
-  );
-  return rows;
-}
-
 async function getBySlug(slug) {
   const { rows } = await pool.query(
     `SELECT
@@ -261,7 +248,6 @@ async function remove(id) {
 module.exports = {
   getLatestPublished,
   getMostViewed,
-  getTopCategories,
   getBySlug,
   getRelatedByCategory,
   incrementViewCount,
