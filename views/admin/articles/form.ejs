@@ -98,6 +98,10 @@
       <input type="hidden" name="existing_featured_image" value="<%= article.featured_image %>">
     <% } %>
     <input type="file" name="featured_image" accept="image/*">
+    <label>
+      Caption <span class="admin-form-hint">(optional — shown below the image and used as its alt text)</span>
+      <input type="text" name="featured_image_caption" value="<%= article ? (article.featured_image_caption || '') : '' %>">
+    </label>
   </fieldset>
 
   <fieldset class="admin-fieldset">

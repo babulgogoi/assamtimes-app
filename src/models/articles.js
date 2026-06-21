@@ -44,7 +44,7 @@ async function getMostViewed({ limit }) {
 async function getBySlug(slug) {
   const { rows } = await pool.query(
     `SELECT
-       a.id, a.slug, a.title, a.body, a.excerpt, a.featured_image, a.gallery_images,
+       a.id, a.slug, a.title, a.body, a.excerpt, a.featured_image, a.featured_image_caption, a.gallery_images,
        a.video_url, a.audio_file, a.pdf_file, a.category, a.status,
        a.published_at, a.views_count, a.likes_count,
        au.username AS author_username, au.display_name AS author_name,
@@ -148,7 +148,7 @@ async function countSearch(query) {
 async function getById(id) {
   const { rows } = await pool.query(
     `SELECT
-       a.id, a.slug, a.title, a.body, a.excerpt, a.featured_image, a.gallery_images,
+       a.id, a.slug, a.title, a.body, a.excerpt, a.featured_image, a.featured_image_caption, a.gallery_images,
        a.video_url, a.audio_file, a.pdf_file, a.author_id, a.category, a.status,
        a.published_at, a.views_count,
        au.username AS author_username, au.display_name AS author_name
@@ -226,12 +226,13 @@ async function slugExists(slug, excludeId = null) {
 async function create(data) {
   const { rows } = await pool.query(
     `INSERT INTO articles
-       (slug, title, body, featured_image, gallery_images, video_url, audio_file, pdf_file,
+       (slug, title, body, featured_image, featured_image_caption, gallery_images, video_url, audio_file, pdf_file,
         author_id, category, status, published_at, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now(), now())
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), now())
      RETURNING id`,
     [
-      data.slug, data.title, data.body, data.featured_image, JSON.stringify(data.gallery_images || []),
+      data.slug, data.title, data.body, data.featured_image, data.featured_image_caption,
+      JSON.stringify(data.gallery_images || []),
       data.video_url, data.audio_file, data.pdf_file, data.author_id, data.category, data.status,
       data.published_at,
     ]
@@ -242,12 +243,13 @@ async function create(data) {
 async function update(id, data) {
   await pool.query(
     `UPDATE articles SET
-       slug = $1, title = $2, body = $3, featured_image = $4, gallery_images = $5,
-       video_url = $6, audio_file = $7, pdf_file = $8, author_id = $9, category = $10, status = $11,
-       published_at = $12, updated_at = now()
-     WHERE id = $13`,
+       slug = $1, title = $2, body = $3, featured_image = $4, featured_image_caption = $5, gallery_images = $6,
+       video_url = $7, audio_file = $8, pdf_file = $9, author_id = $10, category = $11, status = $12,
+       published_at = $13, updated_at = now()
+     WHERE id = $14`,
     [
-      data.slug, data.title, data.body, data.featured_image, JSON.stringify(data.gallery_images || []),
+      data.slug, data.title, data.body, data.featured_image, data.featured_image_caption,
+      JSON.stringify(data.gallery_images || []),
       data.video_url, data.audio_file, data.pdf_file, data.author_id, data.category, data.status,
       data.published_at, id,
     ]

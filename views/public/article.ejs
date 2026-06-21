@@ -26,7 +26,10 @@
         </p>
       </div>
 
-      <img class="article-detail__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.title %>">
+      <img class="article-detail__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.featured_image_caption || article.title %>">
+      <% if (article.featured_image_caption) { %>
+        <p class="article-detail__image-caption"><%= article.featured_image_caption %></p>
+      <% } %>
 
       <% if (article.excerpt) { %>
         <p class="article-detail__excerpt"><%= article.excerpt %></p>

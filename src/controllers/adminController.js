@@ -183,6 +183,7 @@ async function buildArticleData(req, existingArticle = null) {
   } else {
     data.featured_image = body.existing_featured_image || null;
   }
+  data.featured_image_caption = (body.featured_image_caption || '').trim() || null;
 
   if (files.audio_file && files.audio_file[0]) {
     data.audio_file = urlFor('audio_file', files.audio_file[0].filename);
