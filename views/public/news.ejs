@@ -1,0 +1,42 @@
+<div class="home-layout">
+  <div class="home-main">
+    <h1 class="page-title">Latest News</h1>
+
+    <% if (!articles.length) { %>
+      <p>No articles found.</p>
+    <% } else { %>
+      <div class="article-grid">
+        <% articles.forEach(function (article) { %>
+          <article class="article-card">
+            <a href="/article/<%= article.slug %>">
+              <img class="article-card__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.title %>">
+              <h2 class="article-card__title"><%= article.title %></h2>
+            </a>
+            <p class="article-meta">
+              <% if (article.author_username) { %>
+                by <a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a>
+              <% } %>
+              <% if (article.category) { %>
+                in <a href="/category/<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
+              <% } %>
+            </p>
+          </article>
+        <% }) %>
+      </div>
+
+      <nav class="pagination">
+        <% if (page > 1) { %>
+          <a href="/news?page=<%= page - 1 %>">&laquo; Prev</a>
+        <% } %>
+        <span>Page <%= page %> of <%= totalPages %></span>
+        <% if (page < totalPages) { %>
+          <a href="/news?page=<%= page + 1 %>">Next &raquo;</a>
+        <% } %>
+      </nav>
+    <% } %>
+  </div>
+
+  <aside class="home-sidebar">
+    <%- include('../partials/sidebar-most-read') %>
+  </aside>
+</div>

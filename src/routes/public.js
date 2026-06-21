@@ -19,6 +19,7 @@ router.use(async (req, res, next) => {
 });
 
 router.get('/', publicController.home);
+router.get('/news', publicController.newsPage);
 router.get('/article/:slug', publicController.articleDetail);
 router.get('/category/:category', publicController.categoryPage);
 router.get('/author/:username', publicController.authorPage);

@@ -34,7 +34,7 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  border-bottom: 3px solid #1a1a1a;
+  background-color: #FF8F45;
 }
 
 .site-header__logo {
@@ -61,9 +61,10 @@ body {
 }
 
 .site-header__nav a {
-  color: #1a1a1a;
+  color: #1a2b4c;
   text-decoration: none;
   font-size: 0.9rem;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
@@ -83,30 +84,69 @@ body {
 .lead-story {
   grid-column: 1 / -1;
   margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid #ddd;
+}
+
+.lead-story__link {
+  position: relative;
+  display: block;
+  color: inherit;
+  text-decoration: none;
 }
 
 .lead-story__image {
   width: 100%;
-  max-height: 420px;
+  max-height: 480px;
   object-fit: cover;
+  display: block;
+}
+
+.lead-story__overlay {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  max-width: 80%;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .lead-story__title {
+  margin: 0 0 0.4rem;
   font-size: 2rem;
-  margin: 0.75rem 0 0.5rem;
+  color: #fff;
+  line-height: 1.2;
 }
 
-.lead-story__excerpt {
-  font-size: 1.1rem;
-  color: #333;
+.lead-story__date {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #eee;
 }
 
 .article-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
+}
+
+.view-all-news {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.view-all-news__btn {
+  display: inline-block;
+  padding: 0.65rem 1.75rem;
+  background-color: #FF8F45;
+  color: #fff;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 3px;
+}
+
+.view-all-news__btn:hover {
+  background-color: #e67a30;
 }
 
 .article-card__image {
@@ -150,6 +190,15 @@ body {
   margin-bottom: 0.75rem;
 }
 
+.featured-articles-list {
+  padding-left: 1.25rem;
+  margin: 0 0 1.5rem;
+}
+
+.featured-articles-list li {
+  margin-bottom: 0.75rem;
+}
+
 @media (max-width: 768px) {
   .home-layout {
     grid-template-columns: 1fr;
@@ -160,6 +209,16 @@ body {
     border-top: 1px solid #ddd;
     padding-left: 0;
     padding-top: 1.5rem;
+  }
+
+  .article-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .article-grid {
+    grid-template-columns: 1fr;
   }
 }
 

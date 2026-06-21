@@ -5,7 +5,7 @@ const adminController = require('../controllers/adminController');
 const adminAuthorsController = require('../controllers/adminAuthorsController');
 const adminPagesController = require('../controllers/adminPagesController');
 const adminMenuController = require('../controllers/adminMenuController');
-const adminFooterController = require('../controllers/adminFooterController');
+const adminSettingsController = require('../controllers/adminSettingsController');
 const { requireAuth } = require('../middleware/auth');
 const { uploadArticleFiles } = require('../middleware/upload');
 
@@ -52,7 +52,7 @@ router.get('/menu/:id/edit', adminMenuController.editMenuItemForm);
 router.post('/menu/:id', adminMenuController.updateMenuItem);
 router.post('/menu/:id/delete', adminMenuController.deleteMenuItem);
 
-router.get('/footer', adminFooterController.editFooterForm);
-router.post('/footer', adminFooterController.updateFooter);
+router.get('/settings', adminSettingsController.editSettingsForm);
+router.post('/settings', adminSettingsController.updateSettings);
 
 module.exports = router;

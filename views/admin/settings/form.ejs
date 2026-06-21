@@ -1,0 +1,15 @@
+<h1>Settings</h1>
+
+<form class="admin-form" method="post" action="/admin/settings">
+  <label>
+    Featured Articles Category <span class="admin-form-hint">(category used for the "Featured Articles" sidebar block on the homepage)</span>
+    <input type="text" name="featured_category" value="<%= featuredCategory %>" required>
+  </label>
+
+  <label>
+    Footer HTML <span class="admin-form-hint">(raw HTML, rendered as-is at the bottom of every public page)</span>
+    <textarea name="footer_html" rows="20" style="font-family: monospace;"><%= footerHtml || '' %></textarea>
+  </label>
+
+  <button type="submit" class="admin-btn admin-btn--primary">Save</button>
+</form>

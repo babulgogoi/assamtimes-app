@@ -23,6 +23,11 @@ async function getLatestPublished({ limit, offset = 0 }) {
   return rows;
 }
 
+async function countPublished() {
+  const { rows } = await pool.query(`SELECT COUNT(*) AS total FROM articles WHERE status = 'published'`);
+  return Number(rows[0].total);
+}
+
 async function getMostViewed({ limit }) {
   const { rows } = await pool.query(
     `SELECT ${ARTICLE_CARD_FIELDS}
@@ -247,6 +252,7 @@ async function remove(id) {
 
 module.exports = {
   getLatestPublished,
+  countPublished,
   getMostViewed,
   getBySlug,
   getRelatedByCategory,

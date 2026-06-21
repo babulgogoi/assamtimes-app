@@ -1,0 +1,21 @@
+<%- include('ads-sidebar') %>
+
+<% if (featuredArticles && featuredArticles.length) { %>
+  <h3 class="home-sidebar__heading">Featured Articles</h3>
+  <ul class="featured-articles-list">
+    <% featuredArticles.forEach(function (article) { %>
+      <li>
+        <a href="/article/<%= article.slug %>"><%= article.title %></a>
+      </li>
+    <% }) %>
+  </ul>
+<% } %>
+
+<h3 class="home-sidebar__heading">Most Read</h3>
+<ol class="most-read-list">
+  <% mostViewed.forEach(function (article) { %>
+    <li>
+      <a href="/article/<%= article.slug %>"><%= article.title %></a>
+    </li>
+  <% }) %>
+</ol>

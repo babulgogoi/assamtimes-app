@@ -3,21 +3,15 @@
 
     <% if (lead) { %>
       <article class="lead-story">
-        <a href="/article/<%= lead.slug %>">
+        <a class="lead-story__link" href="/article/<%= lead.slug %>">
           <img class="lead-story__image" src="<%= lead.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= lead.title %>">
-          <h1 class="lead-story__title"><%= lead.title %></h1>
+          <div class="lead-story__overlay">
+            <h1 class="lead-story__title"><%= lead.title %></h1>
+            <p class="lead-story__date">
+              <%= lead.published_at ? new Date(lead.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '' %>
+            </p>
+          </div>
         </a>
-        <% if (lead.excerpt) { %>
-          <p class="lead-story__excerpt"><%= lead.excerpt %></p>
-        <% } %>
-        <p class="article-meta">
-          <% if (lead.author_username) { %>
-            by <a href="/author/<%= encodeURIComponent(lead.author_username) %>"><%= lead.author_name %></a>
-          <% } %>
-          <% if (lead.category) { %>
-            in <a href="/category/<%= encodeURIComponent(lead.category) %>"><%= lead.category %></a>
-          <% } %>
-        </p>
       </article>
     <% } %>
 
@@ -40,9 +34,13 @@
       <% }) %>
     </div>
 
+    <div class="view-all-news">
+      <a class="view-all-news__btn" href="/news">View All News</a>
+    </div>
+
   </div>
 
   <aside class="home-sidebar">
-    <%- include('../partials/sidebar-most-read') %>
+    <%- include('../partials/sidebar-home') %>
   </aside>
 </div>

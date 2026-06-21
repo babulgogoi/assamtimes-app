@@ -1,17 +1,24 @@
 const articlesModel = require('../models/articles');
 const authorsModel = require('../models/authors');
 const pagesModel = require('../models/pages');
+const siteSettingsModel = require('../models/siteSettings');
 
 const CATEGORY_PAGE_SIZE = 12;
 const AUTHOR_PAGE_SIZE = 12;
 const SEARCH_PAGE_SIZE = 12;
 const SEARCH_MIN_LENGTH = 2;
+const NEWS_PAGE_SIZE = 18;
+const HOME_GRID_SIZE = 18;
+const FEATURED_ARTICLES_SIZE = 5;
 
 async function home(req, res, next) {
   try {
-    const [latest, mostViewed] = await Promise.all([
-      articlesModel.getLatestPublished({ limit: 9 }),
+    const featuredCategory = await siteSettingsModel.getFeaturedCategory();
+
+    const [latest, mostViewed, featuredArticles] = await Promise.all([
+      articlesModel.getLatestPublished({ limit: HOME_GRID_SIZE + 1 }),
       articlesModel.getMostViewed({ limit: 5 }),
+      articlesModel.getByCategory({ category: featuredCategory, limit: FEATURED_ARTICLES_SIZE }),
     ]);
 
     const [lead, ...grid] = latest;
@@ -21,6 +28,32 @@ async function home(req, res, next) {
       lead,
       grid,
       mostViewed,
+      featuredArticles,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function newsPage(req, res, next) {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const offset = (page - 1) * NEWS_PAGE_SIZE;
+
+    const [articles, total, mostViewed] = await Promise.all([
+      articlesModel.getLatestPublished({ limit: NEWS_PAGE_SIZE, offset }),
+      articlesModel.countPublished(),
+      articlesModel.getMostViewed({ limit: 5 }),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / NEWS_PAGE_SIZE));
+
+    res.render('public/news', {
+      title: 'Latest News — Assam Times',
+      articles,
+      mostViewed,
+      page,
+      totalPages,
     });
   } catch (err) {
     next(err);
@@ -175,6 +208,7 @@ async function pageDetail(req, res, next) {
 
 module.exports = {
   home,
+  newsPage,
   articleDetail,
   categoryPage,
   authorPage,
