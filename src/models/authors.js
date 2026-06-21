@@ -51,7 +51,7 @@ async function findOrCreate({ username, displayName }) {
 
 async function getById(id) {
   const { rows } = await pool.query(
-    `SELECT id, username, display_name, bio, photo FROM authors WHERE id = $1`,
+    `SELECT id, username, email, display_name, bio, photo FROM authors WHERE id = $1`,
     [id]
   );
   return rows[0] || null;
@@ -79,18 +79,18 @@ async function isUsernameTaken(username, excludeId = null) {
   return rows.length > 0;
 }
 
-async function create({ username, displayName, bio, photo }) {
+async function create({ username, email, displayName, bio, photo }) {
   const { rows } = await pool.query(
-    `INSERT INTO authors (username, display_name, bio, photo) VALUES ($1, $2, $3, $4) RETURNING id`,
-    [username, displayName || username, bio || null, photo || null]
+    `INSERT INTO authors (username, email, display_name, bio, photo) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [username, email || null, displayName || username, bio || null, photo || null]
   );
   return rows[0].id;
 }
 
-async function update(id, { username, displayName, bio, photo }) {
+async function update(id, { username, email, displayName, bio, photo }) {
   await pool.query(
-    `UPDATE authors SET username = $1, display_name = $2, bio = $3, photo = $4 WHERE id = $5`,
-    [username, displayName || username, bio || null, photo || null, id]
+    `UPDATE authors SET username = $1, email = $2, display_name = $3, bio = $4, photo = $5 WHERE id = $6`,
+    [username, email || null, displayName || username, bio || null, photo || null, id]
   );
 }
 

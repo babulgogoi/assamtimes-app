@@ -8,6 +8,7 @@ const DESTINATIONS = {
   gallery_images: process.env.UPLOADS_ARTICLES_DIR,
   audio_file: process.env.UPLOADS_AUDIO_DIR,
   pdf_file: process.env.UPLOADS_DOCUMENTS_DIR,
+  photo: process.env.UPLOADS_AUTHORS_DIR,
 };
 
 const URL_PREFIXES = {
@@ -15,6 +16,7 @@ const URL_PREFIXES = {
   gallery_images: '/uploads/articles',
   audio_file: '/uploads/audio',
   pdf_file: '/uploads/documents',
+  photo: '/uploads/authors',
 };
 
 const ALLOWED_MIME = {
@@ -22,6 +24,7 @@ const ALLOWED_MIME = {
   gallery_images: /^image\//,
   audio_file: /^audio\//,
   pdf_file: /^application\/pdf$/,
+  photo: /^image\//,
 };
 
 // Mimetype alone is client-supplied and spoofable; the extension also gates what gets written
@@ -31,6 +34,7 @@ const ALLOWED_EXTENSIONS = {
   gallery_images: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
   audio_file: ['.mp3', '.wav', '.ogg', '.m4a'],
   pdf_file: ['.pdf'],
+  photo: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
 };
 
 const storage = multer.diskStorage({
@@ -101,6 +105,7 @@ module.exports = {
     { name: 'audio_file', maxCount: 1 },
     { name: 'pdf_file', maxCount: 1 },
   ]),
+  uploadAuthorPhoto: upload.fields([{ name: 'photo', maxCount: 1 }]),
   urlFor,
   deleteUploadedFile,
 };

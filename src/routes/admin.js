@@ -7,7 +7,7 @@ const adminPagesController = require('../controllers/adminPagesController');
 const adminMenuController = require('../controllers/adminMenuController');
 const adminSettingsController = require('../controllers/adminSettingsController');
 const { requireAuth } = require('../middleware/auth');
-const { uploadArticleFiles } = require('../middleware/upload');
+const { uploadArticleFiles, uploadAuthorPhoto } = require('../middleware/upload');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -34,9 +34,9 @@ router.post('/articles/:id/delete', adminController.deleteArticle);
 
 router.get('/authors', adminAuthorsController.listAuthors);
 router.get('/authors/new', adminAuthorsController.newAuthorForm);
-router.post('/authors', adminAuthorsController.createAuthor);
+router.post('/authors', uploadAuthorPhoto, adminAuthorsController.createAuthor);
 router.get('/authors/:id/edit', adminAuthorsController.editAuthorForm);
-router.post('/authors/:id', adminAuthorsController.updateAuthor);
+router.post('/authors/:id', uploadAuthorPhoto, adminAuthorsController.updateAuthor);
 
 router.get('/pages', adminPagesController.listPages);
 router.get('/pages/new', adminPagesController.newPageForm);

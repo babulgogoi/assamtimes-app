@@ -1,4 +1,5 @@
 const authorsModel = require('../models/authors');
+const { urlFor, deleteUploadedFile } = require('../middleware/upload');
 
 async function listAuthors(req, res, next) {
   try {
@@ -42,6 +43,17 @@ async function editAuthorForm(req, res, next) {
   }
 }
 
+function resolvePhoto(req, existingPhoto) {
+  const files = req.files || {};
+  if (files.photo && files.photo[0]) {
+    return urlFor('photo', files.photo[0].filename);
+  }
+  if (req.body.remove_photo) {
+    return null;
+  }
+  return req.body.existing_photo || existingPhoto || null;
+}
+
 async function createAuthor(req, res, next) {
   try {
     const username = (req.body.username || '').trim();
@@ -64,9 +76,10 @@ async function createAuthor(req, res, next) {
 
     const id = await authorsModel.create({
       username,
+      email: (req.body.email || '').trim(),
       displayName: (req.body.display_name || '').trim(),
       bio: req.body.bio,
-      photo: req.body.photo,
+      photo: resolvePhoto(req, null),
     });
     res.redirect(`/admin/authors/${id}/edit`);
   } catch (err) {
@@ -99,11 +112,17 @@ async function updateAuthor(req, res, next) {
       });
     }
 
+    const photo = resolvePhoto(req, author.photo);
+    if (author.photo && author.photo !== photo) {
+      deleteUploadedFile(author.photo);
+    }
+
     await authorsModel.update(author.id, {
       username,
+      email: (req.body.email || '').trim(),
       displayName: (req.body.display_name || '').trim(),
       bio: req.body.bio,
-      photo: req.body.photo,
+      photo,
     });
     res.redirect(`/admin/authors/${author.id}/edit`);
   } catch (err) {
