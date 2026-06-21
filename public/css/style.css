@@ -265,15 +265,20 @@ body {
 
   .site-header__logo {
     order: 1;
+    flex: 1 1 0;
+    min-width: 210px;
   }
 
   .site-header__logo img {
-    max-width: 160px;
+    width: 100%;
+    max-width: 350px;
+    height: auto;
   }
 
   .site-header__menu-toggle {
     display: flex;
     order: 2;
+    flex-shrink: 0;
   }
 
   .site-header__search {
@@ -313,10 +318,6 @@ body {
 @media (max-width: 480px) {
   .article-grid {
     grid-template-columns: 1fr;
-  }
-
-  .site-header__logo img {
-    max-width: 120px;
   }
 }
 
