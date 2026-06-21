@@ -74,6 +74,7 @@ app.use('/uploads/audio', express.static(process.env.UPLOADS_AUDIO_DIR));
 app.use('/uploads/documents', express.static(process.env.UPLOADS_DOCUMENTS_DIR));
 app.use('/uploads/defaults', express.static(process.env.UPLOADS_DEFAULTS_DIR));
 app.use('/uploads/branding', express.static(process.env.UPLOADS_BRANDING_DIR));
+app.use('/uploads/authors', express.static(process.env.UPLOADS_AUTHORS_DIR));
 
 app.get('/health', async (req, res) => {
   try {

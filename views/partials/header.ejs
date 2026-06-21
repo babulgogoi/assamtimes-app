@@ -3,7 +3,14 @@
     <a class="site-header__logo" href="/">
       <img src="/uploads/branding/logo.jpg" alt="Assam Times">
     </a>
-    <nav class="site-header__nav">
+
+    <button class="site-header__menu-toggle" id="menuToggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="siteNav">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="site-header__nav" id="siteNav">
       <% if (typeof menuItems !== 'undefined') { %>
         <% menuItems.forEach(function (item) { %>
           <% if (item.url) { %>
