@@ -1,4 +1,9 @@
-<h1><%= author ? 'Edit Author' : 'New Author' %></h1>
+<div class="admin-list-header">
+  <h1><%= author ? 'Edit Author' : 'New Author' %></h1>
+  <% if (author && author.username) { %>
+    <a class="admin-btn admin-btn--primary" href="/author/<%= encodeURIComponent(author.username) %>" target="_blank" rel="noopener">View Author</a>
+  <% } %>
+</div>
 
 <% if (errors && errors.length) { %>
   <ul class="admin-form-errors">
