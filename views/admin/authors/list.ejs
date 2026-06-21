@@ -3,7 +3,11 @@
   <a class="admin-btn admin-btn--primary" href="/admin/authors/new">+ New Author</a>
 </div>
 
-<table class="admin-table">
+<div class="admin-filter-bar">
+  <input type="text" id="authorSearch" placeholder="Search by username or display name...">
+</div>
+
+<table class="admin-table" id="authorsTable">
   <thead>
     <tr>
       <th>Username</th>
@@ -14,7 +18,7 @@
   </thead>
   <tbody>
     <% authors.forEach(function (author) { %>
-      <tr>
+      <tr data-username="<%= author.username.toLowerCase() %>" data-display-name="<%= (author.display_name || '').toLowerCase() %>">
         <td><a href="/admin/authors/<%= author.id %>/edit"><%= author.username %></a></td>
         <td><%= author.display_name || '—' %></td>
         <td><%= author.article_count %></td>
@@ -26,3 +30,19 @@
     <% } %>
   </tbody>
 </table>
+<p id="authorSearchEmpty" class="admin-form-hint" hidden>No authors match your search.</p>
+
+<script>
+  document.getElementById('authorSearch').addEventListener('input', function (e) {
+    var query = e.target.value.trim().toLowerCase();
+    var rows = document.querySelectorAll('#authorsTable tbody tr[data-username]');
+    var visibleCount = 0;
+    rows.forEach(function (row) {
+      var matches = row.getAttribute('data-username').indexOf(query) !== -1 ||
+        row.getAttribute('data-display-name').indexOf(query) !== -1;
+      row.style.display = matches ? '' : 'none';
+      if (matches) visibleCount++;
+    });
+    document.getElementById('authorSearchEmpty').hidden = visibleCount !== 0;
+  });
+</script>
