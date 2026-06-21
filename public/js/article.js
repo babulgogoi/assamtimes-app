@@ -70,3 +70,36 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 });
+
+(function () {
+  function loadFbEmbed(iframe) {
+    var container = iframe.closest('.fb-video-wrapper');
+    var width = Math.round(container.getBoundingClientRect().width);
+    if (width < 280) width = 280; // Facebook's minimum supported width
+
+    var height = Math.round(width * (430 / 560)); // keep original aspect ratio
+    var videoUrl = encodeURIComponent(iframe.getAttribute('data-fb-url'));
+
+    var src = 'https://www.facebook.com/plugins/video.php' +
+      '?height=' + height +
+      '&href=' + videoUrl +
+      '&show_text=true' +
+      '&width=' + width +
+      '&t=0';
+
+    iframe.src = src;
+    iframe.style.aspectRatio = width + '/' + height;
+  }
+
+  function initAll() {
+    document.querySelectorAll('#fb-video-iframe, .fb-video-iframe').forEach(loadFbEmbed);
+  }
+
+  document.addEventListener('DOMContentLoaded', initAll);
+
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(initAll, 250);
+  });
+})();
