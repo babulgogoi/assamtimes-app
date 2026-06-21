@@ -64,7 +64,7 @@
             <img class="author-box__photo" src="<%= article.author_photo %>" alt="<%= article.author_name %>">
           <% } %>
           <div class="author-box__info">
-            <h3 class="author-box__name">By <a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a></h3>
+            <h3 class="author-box__name"><a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a></h3>
             <% if (article.author_bio) { %>
               <p class="author-box__bio"><%= article.author_bio %></p>
             <% } %>
