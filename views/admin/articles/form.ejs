@@ -1,9 +1,12 @@
 <%
-  function toDatetimeLocal(d) {
-    if (!d) return '';
-    var date = new Date(d);
-    var pad = function (n) { return n < 10 ? '0' + n : n; };
-    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) + 'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  function toDateInput(d) {
+    var date = d ? new Date(d) : new Date();
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate());
+  }
+  function toTimeInput(d) {
+    var date = d ? new Date(d) : new Date();
+    return pad(date.getHours()) + ':' + pad(date.getMinutes());
   }
 %>
 <div class="admin-list-header">
@@ -19,11 +22,29 @@
   </ul>
 <% } %>
 
+<% if (typeof fbStatus !== 'undefined' && fbStatus === 'posted') { %>
+  <p class="admin-social-status admin-social-status--ok">&#10003; Posted to Facebook</p>
+<% } else if (typeof fbStatus !== 'undefined' && fbStatus === 'failed') { %>
+  <p class="admin-social-status admin-social-status--error">&#9888; Facebook post failed — check logs</p>
+<% } %>
+
+<% if (typeof twitterStatus !== 'undefined' && twitterStatus === 'posted') { %>
+  <p class="admin-social-status admin-social-status--ok">&#10003; Posted to X</p>
+<% } else if (typeof twitterStatus !== 'undefined' && twitterStatus === 'failed') { %>
+  <p class="admin-social-status admin-social-status--error">&#9888; X post failed — check logs</p>
+<% } %>
+
 <form class="admin-form" method="post" action="<%= article ? '/admin/articles/' + article.id : '/admin/articles' %>" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" id="csrfTokenField" value="<%= csrfToken %>">
 
   <label>
     Title
     <input type="text" name="title" value="<%= article ? article.title : '' %>" required>
+  </label>
+
+  <label>
+    Subheadline <span class="admin-form-hint">(optional — displayed below title on article page)</span>
+    <input type="text" name="subheadline" value="<%= article ? (article.subheadline || '') : '' %>">
   </label>
 
   <label>
@@ -33,10 +54,22 @@
 
   <label>
     Body
-    <textarea name="body" id="body" rows="14" required><%= article ? article.body : '' %></textarea>
+    <textarea name="body" id="body" rows="14"><%= article ? article.body : '' %></textarea>
   </label>
 
   <div class="admin-form-row">
+    <label>
+      Dateline <span class="admin-form-hint">(city/location shown at top of article body)</span>
+      <input type="text" name="dateline" value="<%= article ? (article.dateline || '') : '' %>"
+             placeholder="e.g. Guwahati, New Delhi, Itanagar"
+             list="dateline-suggestions" autocomplete="off">
+      <datalist id="dateline-suggestions">
+        <% (typeof datelines !== 'undefined' ? datelines : []).forEach(function (d) { %>
+          <option value="<%= d %>">
+        <% }) %>
+      </datalist>
+    </label>
+
     <label>
       Category
       <select name="category">
@@ -49,17 +82,41 @@
 
     <label>
       Status
-      <select name="status">
+      <select name="status" id="status">
         <option value="draft" <%= article && article.status === 'draft' ? 'selected' : '' %>>Draft</option>
+        <option value="scheduled" <%= article && article.status === 'scheduled' ? 'selected' : '' %>>&#9200; Scheduled</option>
         <option value="published" <%= !article || article.status === 'published' ? 'selected' : '' %>>Published</option>
       </select>
     </label>
 
+    <label class="admin-checkbox">
+      <input type="checkbox" name="is_editors_pick" <%= article && article.is_editors_pick ? 'checked' : '' %>>
+      Editor's Pick
+    </label>
+
+    <label class="admin-checkbox">
+      <input type="checkbox" name="is_breaking" <%= article && article.is_breaking ? 'checked' : '' %>>
+      Breaking News <span class="admin-form-hint">(expires automatically 24 hours after the published date — no manual expiry to set)</span>
+    </label>
+
     <label>
-      Published At
-      <input type="datetime-local" name="published_at" value="<%= article ? toDatetimeLocal(article.published_at) : '' %>">
+      Publish Date
+      <input type="date" name="publish_date" id="publish_date" value="<%= toDateInput(article ? article.published_at : null) %>">
+    </label>
+
+    <label>
+      Publish Time
+      <input type="time" name="publish_time" id="publish_time" value="<%= toTimeInput(article ? article.published_at : null) %>">
     </label>
   </div>
+  <small id="scheduleHint" class="admin-form-hint" style="display:block;margin-top:-0.75rem"></small>
+
+  <label>
+    Tags / Keywords
+    <input type="text" id="tagsInput" name="tags_raw" value="<%= article && article.tags ? article.tags.join(', ') : '' %>" placeholder="e.g. Assam, Guwahati, floods, BJP, CM Himanta" autocomplete="off">
+    <small class="admin-form-hint">Separate tags with commas. Tags help readers find related content.</small>
+    <div id="tagPreview" class="tag-preview"></div>
+  </label>
 
   <label>
     Video URL
@@ -67,16 +124,63 @@
   </label>
 
   <fieldset class="admin-fieldset">
+    <legend>Live Blog</legend>
+
+    <label class="admin-checkbox">
+      <input type="checkbox" name="is_liveblog" id="isLiveblog" <%= article && article.is_liveblog ? 'checked' : '' %>>
+      <strong>Live Blog</strong> — enable live blog format (timestamped updates instead of/alongside the body)
+    </label>
+
+    <div id="liveblogControls" class="admin-form-row" style="<%= article && article.is_liveblog ? '' : 'display:none' %>">
+      <label>
+        Live Blog Status
+        <select name="liveblog_status">
+          <option value="live" <%= article && article.liveblog_status === 'live' ? 'selected' : '' %>>&#128308; LIVE — currently updating</option>
+          <option value="ended" <%= !article || article.liveblog_status !== 'live' ? 'selected' : '' %>>&#9899; Ended — coverage complete</option>
+        </select>
+      </label>
+    </div>
+
+    <% if (article && article.id) { %>
+      <div class="liveblog-admin-post">
+        <h4>Post New Update</h4>
+        <textarea id="newEntryContent" rows="4" placeholder="Write update here... Markdown supported: **bold**, *italic*, [link](url)"></textarea>
+        <div class="liveblog-admin-post__row">
+          <label class="admin-checkbox">
+            <input type="checkbox" id="isKeyEvent">
+            &#11088; Key event
+          </label>
+          <label class="admin-checkbox">
+            <input type="checkbox" id="isPinned">
+            &#128204; Pin to top
+          </label>
+          <button type="button" id="btnPostEntry" class="btn-post-entry">Post Update</button>
+        </div>
+        <div id="entryPostStatus"></div>
+      </div>
+
+      <div class="liveblog-admin-entries" id="adminEntriesList" data-article-id="<%= article.id %>">Loading entries...</div>
+    <% } %>
+  </fieldset>
+
+  <fieldset class="admin-fieldset">
     <legend>Author</legend>
-    <label>
-      Existing author
-      <select name="author_id" id="author_id">
-        <option value="">— None —</option>
-        <% authors.forEach(function (a) { %>
-          <option value="<%= a.id %>" <%= article && String(article.author_id) === String(a.id) ? 'selected' : '' %>><%= a.display_name || a.username %></option>
-        <% }) %>
-        <option value="__new__">+ Add New Author</option>
-      </select>
+
+    <label class="admin-autocomplete">
+      Existing author <span class="admin-form-hint">(type at least 2 letters to search)</span>
+      <input
+        type="text"
+        id="author_search"
+        autocomplete="off"
+        placeholder="Search by username or display name..."
+        value="<%= article ? (article.author_name || article.author_username || '') : '' %>">
+      <ul id="author_results" class="admin-autocomplete__results" hidden></ul>
+    </label>
+    <input type="hidden" name="author_id" id="author_id" value="<%= article && article.author_id ? article.author_id : '' %>">
+
+    <label class="admin-checkbox">
+      <input type="checkbox" id="toggle_new_author">
+      Add a new author instead
     </label>
     <div id="new-author-fields" class="admin-form-row" style="display:none;">
       <label>
@@ -91,34 +195,73 @@
   </fieldset>
 
   <fieldset class="admin-fieldset">
-    <legend>Featured Image</legend>
-    <% if (article && article.featured_image) { %>
-      <img class="admin-thumb" src="<%= article.featured_image %>" alt="">
-      <label class="admin-checkbox"><input type="checkbox" name="remove_featured_image" value="1"> Remove current image</label>
-      <input type="hidden" name="existing_featured_image" value="<%= article.featured_image %>">
-    <% } %>
-    <input type="file" name="featured_image" accept="image/*">
-    <label>
-      Caption <span class="admin-form-hint">(optional — shown below the image and used as its alt text)</span>
-      <input type="text" name="featured_image_caption" value="<%= article ? (article.featured_image_caption || '') : '' %>">
-    </label>
+    <legend>Co-authors / Contributors</legend>
+    <p class="admin-form-hint">Primary author is set above. Add co-authors, photographers, translators here.</p>
+
+    <div id="coauthorsList">
+      <% (coauthors || []).forEach(function (ca, i) { %>
+        <div class="coauthor-row">
+          <label class="admin-autocomplete coauthor-search-field">
+            <input type="text" class="coauthor-search" name="coauthor_name_<%= i %>" value="<%= ca.display_name || '' %>" placeholder="Search author..." autocomplete="off">
+            <ul class="admin-autocomplete__results coauthor-results" hidden></ul>
+          </label>
+          <input type="hidden" class="coauthor-id" name="coauthor_id_<%= i %>" value="<%= ca.author_id %>">
+          <select name="coauthor_role_<%= i %>" class="coauthor-role">
+            <option value="contributor" <%= ca.role === 'contributor' ? 'selected' : '' %>>Contributor</option>
+            <option value="photographer" <%= ca.role === 'photographer' ? 'selected' : '' %>>Photographer</option>
+            <option value="translator" <%= ca.role === 'translator' ? 'selected' : '' %>>Translator</option>
+            <option value="editor" <%= ca.role === 'editor' ? 'selected' : '' %>>Editor</option>
+          </select>
+          <button type="button" class="btn-remove-coauthor" aria-label="Remove co-author">&#10005;</button>
+        </div>
+      <% }) %>
+    </div>
+
+    <button type="button" id="btnAddCoauthor" class="btn-add-coauthor">+ Add Co-author</button>
   </fieldset>
 
-  <fieldset class="admin-fieldset">
-    <legend>Gallery Images</legend>
-    <% if (article && article.gallery_images && article.gallery_images.length) { %>
-      <div class="admin-gallery">
-        <% article.gallery_images.forEach(function (img, idx) { %>
-          <div class="admin-gallery__item">
-            <img class="admin-thumb admin-thumb--small" src="<%= img.url %>" alt="">
-            <input type="hidden" name="gallery_url_<%= idx %>" value="<%= img.url %>">
-            <label class="admin-checkbox"><input type="checkbox" name="gallery_keep_<%= idx %>" value="1" checked> Keep</label>
-            <input type="text" name="gallery_caption_<%= idx %>" value="<%= img.caption || '' %>" placeholder="Caption (optional)">
-          </div>
-        <% }) %>
-      </div>
-    <% } %>
-    <input type="file" name="gallery_images" accept="image/*" multiple>
+  <script type="application/json" id="authorsData"><%- JSON.stringify(authors).replace(/</g, '\\u003c') %></script>
+
+  <fieldset class="admin-fieldset" id="featuredFieldset">
+    <legend>Featured Image</legend>
+    <%# existing_featured_image carries the saved/uploaded image URL; the AJAX
+        upload sets it, "× Remove" clears it. No multipart file is submitted
+        with the main form once JS has uploaded one. %>
+    <input type="hidden" name="existing_featured_image" id="featuredExisting" value="<%= article ? (article.featured_image || '') : '' %>">
+
+    <div id="featuredPreviewWrap" class="admin-img-preview"<%= (article && article.featured_image) ? '' : ' hidden' %>>
+      <img id="featuredPreview" class="admin-img-preview__thumb" src="<%= article && article.featured_image ? (typeof thumbUrl === 'function' ? thumbUrl(article.featured_image) : article.featured_image) : '' %>" alt="">
+      <a href="#" id="featuredRemove" class="admin-img-remove">&times; Remove</a>
+    </div>
+
+    <input type="file" name="featured_image" id="featuredFile" accept=".jpg,.jpeg,.png,.gif,.webp">
+    <span id="featuredStatus" class="admin-upload-status" aria-live="polite"></span>
+
+    <div id="featuredFields"<%= (article && article.featured_image) ? '' : ' hidden' %>>
+      <label>
+        Image alt text <span class="admin-form-hint">(required for accessibility)</span>
+        <input type="text" name="featured_image_alt" id="featuredAlt" value="<%= article ? (article.featured_image_alt || '') : '' %>"
+               placeholder="Describe the image, e.g. &quot;Assam CM addressing a press conference&quot;" maxlength="200">
+        <small style="color:#888">Used by screen readers and as SEO image alt text. Pre-filled from the title.</small>
+      </label>
+      <label>
+        Caption <span class="admin-form-hint">(optional — shown below the image)</span>
+        <input type="text" name="featured_image_caption" id="featuredCaption" value="<%= article ? (article.featured_image_caption || '') : '' %>">
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="admin-fieldset" id="galleryFieldset">
+    <legend>Gallery Images <span class="admin-form-hint">(up to 10)</span></legend>
+    <%# The whole gallery (existing + newly uploaded, with per-image alt/caption)
+        lives in this hidden JSON field, kept in sync by admin-article-image.js. %>
+    <input type="hidden" name="gallery_data" id="galleryData" value="[]">
+    <script type="application/json" id="galleryInitial"><%- JSON.stringify((article && article.gallery_images) || []).replace(/</g, '\\u003c') %></script>
+
+    <div id="galleryGrid" class="admin-gallery"></div>
+
+    <input type="file" name="gallery_images" id="galleryFile" accept=".jpg,.jpeg,.png,.gif,.webp" multiple>
+    <span id="galleryStatus" class="admin-upload-status" aria-live="polite"></span>
   </fieldset>
 
   <fieldset class="admin-fieldset">
@@ -141,9 +284,28 @@
     <input type="file" name="pdf_file" accept="application/pdf">
   </fieldset>
 
-  <button type="submit" class="admin-btn admin-btn--primary"><%= article ? 'Save Changes' : 'Create Article' %></button>
+  <label class="admin-checkbox">
+    <input type="checkbox" name="is_advertisement" <%= article && article.is_advertisement ? 'checked' : '' %>>
+    This is a paid/advertisement article
+  </label>
+  <p style="font-size:12px;color:#888">
+    Paid articles are excluded from the homepage, category
+    pages, sitemap, and RSS feed. The article page itself
+    stays live and accessible via direct link.
+  </p>
+
+  <div class="form-actions">
+    <button type="submit" name="action" value="save" class="btn-save-article"><%= article ? 'Save Changes' : 'Create Article' %></button>
+
+    <button type="submit" name="action" value="save_preview" class="btn-preview-article">Preview Article</button>
+
+    <% if (article && article.status === 'published') { %>
+      <a href="/article/<%= article.slug %>" target="_blank" rel="noopener" class="btn-view-live">View Live &rarr;</a>
+    <% } %>
+  </div>
 </form>
 
+<script src="/js/admin-article-image.js?v=3"></script>
 <script src="/vendor/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
   tinymce.init({
@@ -157,16 +319,338 @@
   });
 
   (function () {
-    var authorSelect = document.getElementById('author_id');
+    var authorsData = JSON.parse(document.getElementById('authorsData').textContent);
+    var searchInput = document.getElementById('author_search');
+    var hiddenInput = document.getElementById('author_id');
+    var resultsList = document.getElementById('author_results');
+
+    function renderResults(query) {
+      var q = query.trim().toLowerCase();
+      resultsList.innerHTML = '';
+      if (q.length < 2) {
+        resultsList.hidden = true;
+        return;
+      }
+      var matches = authorsData.filter(function (a) {
+        return (a.username && a.username.toLowerCase().indexOf(q) !== -1) ||
+               (a.display_name && a.display_name.toLowerCase().indexOf(q) !== -1);
+      }).slice(0, 20);
+
+      if (!matches.length) {
+        resultsList.hidden = true;
+        return;
+      }
+
+      matches.forEach(function (a) {
+        var li = document.createElement('li');
+        li.textContent = a.display_name || a.username;
+        li.addEventListener('click', function () {
+          hiddenInput.value = a.id;
+          searchInput.value = a.display_name || a.username;
+          resultsList.hidden = true;
+        });
+        resultsList.appendChild(li);
+      });
+      resultsList.hidden = false;
+    }
+
+    searchInput.addEventListener('input', function () {
+      hiddenInput.value = '';
+      renderResults(searchInput.value);
+    });
+
+    searchInput.addEventListener('focus', function () {
+      if (searchInput.value.trim().length >= 2) renderResults(searchInput.value);
+    });
+
+    document.addEventListener('click', function (e) {
+      if (e.target !== searchInput && !resultsList.contains(e.target)) {
+        resultsList.hidden = true;
+      }
+    });
+
+    var toggleNewAuthor = document.getElementById('toggle_new_author');
     var newAuthorFields = document.getElementById('new-author-fields');
-    function toggleNewAuthor() {
-      var isNew = authorSelect.value === '__new__';
+    toggleNewAuthor.addEventListener('change', function () {
+      var isNew = toggleNewAuthor.checked;
       newAuthorFields.style.display = isNew ? 'flex' : 'none';
-      if (!isNew) {
+      if (isNew) {
+        hiddenInput.value = '';
+        searchInput.value = '';
+        resultsList.hidden = true;
+      } else {
         document.getElementById('new_author_username').value = '';
       }
+    });
+  })();
+
+  (function () {
+    // Same authorsData blob the primary-author search above already uses —
+    // no separate /admin/authors/search endpoint exists (or is needed).
+    var authorsData = JSON.parse(document.getElementById('authorsData').textContent);
+    var coauthorsList = document.getElementById('coauthorsList');
+    var btnAdd = document.getElementById('btnAddCoauthor');
+    if (!coauthorsList || !btnAdd) return;
+
+    var nextIndex = coauthorsList.querySelectorAll('.coauthor-row').length;
+
+    function attachAutocomplete(row) {
+      var input = row.querySelector('.coauthor-search');
+      var hidden = row.querySelector('.coauthor-id');
+      var resultsList = row.querySelector('.coauthor-results');
+
+      function renderResults(query) {
+        var q = query.trim().toLowerCase();
+        resultsList.innerHTML = '';
+        if (q.length < 2) {
+          resultsList.hidden = true;
+          return;
+        }
+        var matches = authorsData.filter(function (a) {
+          return (a.username && a.username.toLowerCase().indexOf(q) !== -1) ||
+                 (a.display_name && a.display_name.toLowerCase().indexOf(q) !== -1);
+        }).slice(0, 20);
+
+        if (!matches.length) {
+          resultsList.hidden = true;
+          return;
+        }
+
+        matches.forEach(function (a) {
+          var li = document.createElement('li');
+          li.textContent = a.display_name || a.username;
+          li.addEventListener('click', function () {
+            hidden.value = a.id;
+            input.value = a.display_name || a.username;
+            resultsList.hidden = true;
+          });
+          resultsList.appendChild(li);
+        });
+        resultsList.hidden = false;
+      }
+
+      input.addEventListener('input', function () {
+        hidden.value = '';
+        renderResults(input.value);
+      });
+
+      input.addEventListener('focus', function () {
+        if (input.value.trim().length >= 2) renderResults(input.value);
+      });
+
+      document.addEventListener('click', function (e) {
+        if (e.target !== input && !resultsList.contains(e.target)) {
+          resultsList.hidden = true;
+        }
+      });
     }
-    authorSelect.addEventListener('change', toggleNewAuthor);
-    toggleNewAuthor();
+
+    coauthorsList.querySelectorAll('.coauthor-row').forEach(attachAutocomplete);
+
+    btnAdd.addEventListener('click', function () {
+      var idx = nextIndex++;
+      var row = document.createElement('div');
+      row.className = 'coauthor-row';
+      row.innerHTML =
+        '<label class="admin-autocomplete coauthor-search-field">' +
+          '<input type="text" class="coauthor-search" name="coauthor_name_' + idx + '" placeholder="Search author..." autocomplete="off">' +
+          '<ul class="admin-autocomplete__results coauthor-results" hidden></ul>' +
+        '</label>' +
+        '<input type="hidden" class="coauthor-id" name="coauthor_id_' + idx + '" value="">' +
+        '<select name="coauthor_role_' + idx + '" class="coauthor-role">' +
+          '<option value="contributor">Contributor</option>' +
+          '<option value="photographer">Photographer</option>' +
+          '<option value="translator">Translator</option>' +
+          '<option value="editor">Editor</option>' +
+        '</select>' +
+        '<button type="button" class="btn-remove-coauthor" aria-label="Remove co-author">&#10005;</button>';
+      coauthorsList.appendChild(row);
+      attachAutocomplete(row);
+    });
+
+    // Event delegation (not inline onclick=, no precedent for that anywhere
+    // else in this codebase) — one listener handles remove buttons on both
+    // server-rendered and dynamically-added rows.
+    coauthorsList.addEventListener('click', function (e) {
+      if (e.target.classList.contains('btn-remove-coauthor')) {
+        e.target.closest('.coauthor-row').remove();
+      }
+    });
+  })();
+
+  (function () {
+    // Convenience hint only — the actual draft/scheduled/published
+    // resolution (including this same future-date/past-date correction)
+    // happens server-side in adminController.js's buildArticleData, which
+    // is the real source of truth. This just tells the editor what's
+    // about to happen before they click Save.
+    var dateInput = document.getElementById('publish_date');
+    var timeInput = document.getElementById('publish_time');
+    var hint = document.getElementById('scheduleHint');
+    if (!dateInput || !timeInput || !hint) return;
+
+    function updateStatusHint() {
+      var date = dateInput.value;
+      var time = timeInput.value;
+      if (!date || !time) return;
+      var chosen = new Date(date + 'T' + time);
+      if (chosen > new Date()) {
+        hint.textContent = '⏰ This will be scheduled for future publishing';
+        hint.style.color = '#FF6600';
+      } else {
+        hint.textContent = '✓ This date is in the past — will publish immediately';
+        hint.style.color = '#666';
+      }
+    }
+
+    dateInput.addEventListener('change', updateStatusHint);
+    timeInput.addEventListener('change', updateStatusHint);
+    updateStatusHint();
+  })();
+
+  (function () {
+    var tagsInput = document.getElementById('tagsInput');
+    var tagPreview = document.getElementById('tagPreview');
+    if (!tagsInput || !tagPreview) return;
+
+    function renderTagPreview() {
+      var tags = tagsInput.value.split(',').map(function (t) { return t.trim(); }).filter(function (t) { return t.length > 0; });
+      tagPreview.innerHTML = '';
+      tags.forEach(function (t) {
+        var chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        chip.textContent = t;
+        tagPreview.appendChild(chip);
+      });
+    }
+
+    tagsInput.addEventListener('input', renderTagPreview);
+    renderTagPreview();
+  })();
+
+  (function () {
+    var checkbox = document.getElementById('isLiveblog');
+    var controls = document.getElementById('liveblogControls');
+    if (checkbox && controls) {
+      checkbox.addEventListener('change', function () {
+        controls.style.display = checkbox.checked ? '' : 'none';
+      });
+    }
+
+    var entriesList = document.getElementById('adminEntriesList');
+    var btnPost = document.getElementById('btnPostEntry');
+    if (!entriesList || !btnPost) return;
+
+    var articleId = entriesList.dataset.articleId;
+
+    function formatEntryTime(iso) {
+      var d = new Date(iso);
+      return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) +
+        ' <span class="entry-date">' + d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + '</span>';
+    }
+
+    async function loadAdminEntries() {
+      try {
+        const res = await fetch('/admin/liveblog/' + articleId + '/entries');
+        const data = await res.json();
+        entriesList.innerHTML = (data.entries || []).map(function (e) {
+          return (
+            '<div class="admin-entry-item' + (e.is_pinned ? ' is-pinned' : '') + (e.is_key_event ? ' is-key' : '') + '" data-entry-id="' + e.id + '">' +
+              '<div class="admin-entry-meta">' +
+                (e.is_pinned ? '&#128204; ' : '') +
+                (e.is_key_event ? '&#11088; KEY EVENT &mdash; ' : '') +
+                formatEntryTime(e.created_at) +
+              '</div>' +
+              '<div class="admin-entry-content">' + e.content_html + '</div>' +
+              '<div class="admin-entry-actions"><button type="button" class="btn-delete-entry">Delete</button></div>' +
+            '</div>'
+          );
+        }).join('') || '<p class="admin-form-hint">No entries yet.</p>';
+      } catch (e) {
+        entriesList.innerHTML = '<p style="color:#b00">Failed to load entries.</p>';
+      }
+    }
+
+    // Event delegation — handles Delete on every entry, current and
+    // future, with one listener (no inline onclick=, no precedent for
+    // that anywhere else in this codebase).
+    entriesList.addEventListener('click', function (e) {
+      if (!e.target.classList.contains('btn-delete-entry')) return;
+      var item = e.target.closest('.admin-entry-item');
+      var entryId = item && item.dataset.entryId;
+      if (!entryId || !confirm('Delete this update?')) return;
+      fetch('/admin/liveblog/' + articleId + '/entries/' + entryId, {
+        method: 'DELETE',
+        headers: { 'x-csrf-token': document.getElementById('csrfTokenField').value },
+      })
+        .then(loadAdminEntries)
+        .catch(function () { alert('Could not delete this update.'); });
+    });
+
+    btnPost.addEventListener('click', async function () {
+      var content = document.getElementById('newEntryContent').value.trim();
+      var statusEl = document.getElementById('entryPostStatus');
+      if (!content) {
+        alert('Please write something before posting.');
+        return;
+      }
+      var isKeyEvent = document.getElementById('isKeyEvent').checked;
+      var isPinned = document.getElementById('isPinned').checked;
+
+      btnPost.disabled = true;
+      btnPost.textContent = 'Posting...';
+
+      try {
+        const res = await fetch('/admin/liveblog/' + articleId + '/entries', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': document.getElementById('csrfTokenField').value,
+          },
+          body: JSON.stringify({ content: content, is_key_event: isKeyEvent, is_pinned: isPinned }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('newEntryContent').value = '';
+          document.getElementById('isKeyEvent').checked = false;
+          document.getElementById('isPinned').checked = false;
+          statusEl.innerHTML = '<span style="color:#1c7c3f">&#10003; Update posted!</span>';
+          loadAdminEntries();
+          setTimeout(function () { statusEl.innerHTML = ''; }, 3000);
+        } else {
+          statusEl.innerHTML = '<span style="color:#b00">&#10007; ' + (data.error || 'Failed to post') + '</span>';
+        }
+      } catch (e) {
+        statusEl.innerHTML = '<span style="color:#b00">&#10007; Failed to post</span>';
+      }
+
+      btnPost.disabled = false;
+      btnPost.textContent = 'Post Update';
+    });
+
+    loadAdminEntries();
+  })();
+
+  (function () {
+    var form = document.querySelector('form.admin-form');
+    var submitButtons = form.querySelectorAll('button[type="submit"]');
+    var clickedBtn = null;
+    var labels = {
+      save: <%- article ? "'Saving...'" : "'Creating...'" %>,
+      save_preview: 'Loading preview...',
+    };
+
+    submitButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        clickedBtn = btn;
+      });
+    });
+
+    form.addEventListener('submit', function () {
+      submitButtons.forEach(function (btn) { btn.disabled = true; });
+      if (!clickedBtn) return;
+      var label = labels[clickedBtn.value] || 'Loading...';
+      clickedBtn.innerHTML = '<span class="admin-spinner"></span> ' + label;
+    });
   })();
 </script>

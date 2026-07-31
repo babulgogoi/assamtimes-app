@@ -10,6 +10,14 @@ async function getByUsername(username) {
   return rows[0] || null;
 }
 
+async function getByOldUid(oldUid) {
+  const { rows } = await pool.query(
+    `SELECT id, username FROM authors WHERE old_uid = $1`,
+    [oldUid]
+  );
+  return rows[0] || null;
+}
+
 // Includes password_hash — only for the login flow, never expose this to public views.
 async function getByUsernameForAuth(username) {
   const { rows } = await pool.query(
@@ -96,6 +104,7 @@ async function update(id, { username, email, displayName, bio, photo }) {
 
 module.exports = {
   getByUsername,
+  getByOldUid,
   getByUsernameForAuth,
   setPassword,
   getAll,

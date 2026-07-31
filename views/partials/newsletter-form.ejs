@@ -1,0 +1,34 @@
+<%
+  // Included by views/public/subscribe.ejs and views/public/accessibility.ejs.
+  // Caller must set `returnTo` ('/subscribe' or '/accessibility') and may
+  // set `newsletterStatus` ('success' | 'error' | null/undefined).
+  var nlStatus = typeof newsletterStatus !== 'undefined' ? newsletterStatus : null;
+%>
+<% if (nlStatus === 'success') { %>
+  <p class="newsletter-form__success">Thanks for subscribing! You'll hear from us soon.</p>
+<% } else { %>
+  <% if (nlStatus === 'error') { %>
+    <p class="newsletter-form__errors">Please enter your name and a valid email address.</p>
+  <% } %>
+
+  <form class="newsletter-form__fields" method="post" action="/newsletter/subscribe">
+    <input type="hidden" name="return_to" value="<%= returnTo %>">
+
+    <label class="newsletter-form__field">
+      Name
+      <input type="text" name="name" required>
+    </label>
+
+    <label class="newsletter-form__field">
+      Email
+      <input type="email" name="email" required>
+    </label>
+
+    <div class="newsletter-form__honeypot" aria-hidden="true">
+      <label for="newsletter_website">Website</label>
+      <input type="text" id="newsletter_website" name="website" tabindex="-1" autocomplete="off">
+    </div>
+
+    <button type="submit" class="newsletter-form__submit">Subscribe by Email</button>
+  </form>
+<% } %>

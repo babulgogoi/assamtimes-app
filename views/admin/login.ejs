@@ -3,22 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <% if (process.env.NODE_ENV === 'production') { %>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W3VCJYPSX0"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-W3VCJYPSX0');
-    </script>
-  <% } %>
+  <!-- No Google Analytics here, deliberately — see admin/layout.ejs's
+       comment, this is the same /admin/* exclusion (this page renders
+       with layout:false, so it needed its own copy of that fix). -->
   <title><%= title %></title>
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/style.min.css">
+  <link rel="stylesheet" href="/css/admin.min.css">
 </head>
 <body class="admin-login-body">
   <form class="admin-login-form" method="post" action="/admin/login">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <h1>Assam Times Admin</h1>
     <% if (error) { %>
       <p class="admin-login-form__error"><%= error %></p>

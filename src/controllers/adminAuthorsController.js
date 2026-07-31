@@ -1,5 +1,5 @@
 const authorsModel = require('../models/authors');
-const { urlFor, deleteUploadedFile } = require('../middleware/upload');
+const { urlFor, deleteUploadedFile, uploadErrorMessages } = require('../middleware/upload');
 
 async function listAuthors(req, res, next) {
   try {
@@ -21,7 +21,7 @@ function newAuthorForm(req, res) {
     title: 'New Author — Admin',
     authorName: req.session.authorName,
     author: null,
-    errors: [],
+    errors: uploadErrorMessages(req.query.uploadError),
   });
 }
 
@@ -36,7 +36,7 @@ async function editAuthorForm(req, res, next) {
       title: `Edit: ${author.display_name || author.username} — Admin`,
       authorName: req.session.authorName,
       author,
-      errors: [],
+      errors: uploadErrorMessages(req.query.uploadError),
     });
   } catch (err) {
     next(err);

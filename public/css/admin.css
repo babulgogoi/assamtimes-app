@@ -176,6 +176,48 @@
   color: #666;
 }
 
+.admin-badge--scheduled {
+  background: #fff3cd;
+  color: #926500;
+}
+
+.admin-badge--active {
+  background: #e3f6e8;
+  color: #1c7c3f;
+}
+
+.admin-badge--unsubscribed {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.admin-stats-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-stat-box {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.admin-stat-box__number {
+  font-size: 1.75rem;
+  font-weight: bold;
+  color: #1a1a1a;
+}
+
+.admin-stat-box__label {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
 .admin-form {
   display: flex;
   flex-direction: column;
@@ -279,10 +321,619 @@
   font-size: 0.8rem;
 }
 
+/* Instant AJAX upload preview (featured + gallery) */
+.admin-img-preview {
+  margin-bottom: 0.6rem;
+}
+
+.admin-img-preview__thumb {
+  max-width: 230px;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+  margin-bottom: 0.4rem;
+}
+
+.admin-img-preview__thumb--small {
+  max-width: 150px;
+}
+
+.admin-img-remove {
+  font-size: 0.8rem;
+  color: #c0392b;
+  text-decoration: none;
+}
+
+.admin-img-remove:hover {
+  text-decoration: underline;
+}
+
+.admin-upload-status {
+  display: inline-block;
+  margin: 0.3rem 0;
+  font-size: 0.8rem;
+  min-height: 1em;
+}
+
+.admin-upload-status.is-busy {
+  color: #666;
+}
+
+.admin-upload-status.is-error {
+  color: #c0392b;
+}
+
 .admin-form-errors {
   background: #fdecea;
   color: #b00;
   padding: 0.75rem 1.25rem;
   border-radius: 4px;
   margin-bottom: 1rem;
+}
+
+.admin-social-status {
+  padding: 0.75rem 1.25rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+.admin-social-status--ok {
+  background: #e3f6e8;
+  color: #1c7c3f;
+}
+
+.admin-social-status--error {
+  background: #fff3cd;
+  color: #8a6500;
+}
+
+.admin-autocomplete {
+  position: relative;
+}
+
+.admin-autocomplete__results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.admin-autocomplete__results li {
+  padding: 0.5rem 0.75rem;
+  font-weight: normal;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.admin-autocomplete__results li:hover {
+  background: #f0f0f0;
+}
+
+.admin-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+  animation: admin-spin 0.6s linear infinite;
+}
+
+@keyframes admin-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.admin-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.admin-nav-badge {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 0.05rem 0.4rem;
+  border-radius: 10px;
+  background: #d9302f;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.admin-badge--pending {
+  background: #fff3cd;
+  color: #8a6500;
+}
+
+.admin-badge--spam {
+  background: #fdecea;
+  color: #b00;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.admin-tabs__link {
+  display: inline-block;
+  padding: 0.6rem 1rem;
+  color: #555;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.admin-tabs__link.is-active {
+  color: #1a1a1a;
+  font-weight: bold;
+  border-bottom-color: #1a1a1a;
+}
+
+.admin-comment-cell {
+  max-width: 360px;
+}
+
+.admin-comment-cell details summary {
+  cursor: pointer;
+}
+
+.admin-comment-cell details p {
+  margin: 0.5rem 0 0;
+  white-space: pre-wrap;
+}
+
+.admin-comment-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.admin-comment-actions form {
+  display: inline;
+}
+
+/* Contextual article status badge/actions (admin/articles/list.ejs) */
+.status-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.status-published {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-draft {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.status-scheduled {
+  background: #fff3e0;
+  color: #e65c00;
+}
+
+.article-actions {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.article-actions form {
+  display: inline;
+}
+
+.btn-action {
+  padding: 4px 9px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+  display: inline-block;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.btn-view {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.btn-view:hover {
+  background: #bbdefb;
+}
+
+.btn-view-draft {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+.btn-view-draft:hover {
+  background: #e1bee7;
+}
+
+.btn-edit {
+  background: #fff3e0;
+  color: #e65c00;
+}
+
+.btn-edit:hover {
+  background: #ffe0b2;
+}
+
+.btn-to-draft {
+  background: #f5f5f5;
+  color: #555;
+}
+
+.btn-to-draft:hover {
+  background: #e0e0e0;
+}
+
+.btn-publish {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.btn-publish:hover {
+  background: #c8e6c9;
+}
+
+.btn-cancel-schedule {
+  background: #fce4ec;
+  color: #c62828;
+}
+
+.btn-cancel-schedule:hover {
+  background: #f8bbd0;
+}
+
+/* Article edit form action buttons (admin/articles/form.ejs) */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.btn-save-article {
+  background: #FF6600;
+  color: #fff;
+  border: none;
+  padding: 11px 28px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-save-article:hover {
+  background: #e55a00;
+}
+
+.btn-preview-article {
+  background: #fff;
+  color: #FF6600;
+  border: 2px solid #FF6600;
+  padding: 9px 24px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-preview-article:hover {
+  background: #fff5f0;
+}
+
+.btn-view-live {
+  background: #28a745;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-view-live:hover {
+  background: #218838;
+}
+
+/* Tags input live preview (admin/articles/form.ejs) */
+.tag-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  min-height: 28px;
+}
+
+.tag-chip {
+  background: #fff3e0;
+  color: #e65c00;
+  border: 1px solid #ffcc80;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Co-author rows (admin/articles/form.ejs) — .admin-autocomplete/
+   .admin-autocomplete__results above are reused as-is for each row's
+   search dropdown. */
+.coauthor-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.coauthor-search-field {
+  flex: 2;
+  margin: 0;
+}
+
+.coauthor-row input[type="text"] {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  font-weight: normal;
+}
+
+.coauthor-role {
+  flex: 1;
+  padding: 7px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.btn-remove-coauthor {
+  background: #fce4ec;
+  color: #c62828;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+.btn-add-coauthor {
+  background: #f5f5f5;
+  border: 1px dashed #ccc;
+  padding: 7px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #555;
+  margin-top: 4px;
+}
+
+.btn-add-coauthor:hover {
+  background: #fff3e0;
+  border-color: #FF6600;
+  color: #FF6600;
+}
+
+/* Live blog admin (admin/articles/form.ejs) */
+.liveblog-admin-post {
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.liveblog-admin-post h4 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.liveblog-admin-post textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.liveblog-admin-post__row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-post-entry {
+  background: #FF6600;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.btn-post-entry:hover {
+  background: #e55a00;
+}
+
+.btn-post-entry:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.liveblog-admin-entries {
+  margin-top: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.admin-entry-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.85rem;
+}
+
+.admin-entry-item.is-key {
+  background: #fff8f5;
+}
+
+.admin-entry-item.is-pinned {
+  background: #f9f9f9;
+}
+
+.admin-entry-meta {
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.admin-entry-content {
+  color: #333;
+}
+
+.admin-entry-content p {
+  margin: 0 0 6px;
+}
+
+.admin-entry-content p:last-child {
+  margin: 0;
+}
+
+.admin-entry-actions {
+  margin-top: 6px;
+}
+
+.btn-delete-entry {
+  background: #fce4ec;
+  color: #c62828;
+  border: none;
+  padding: 3px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+/* Admin Nav Dropdowns */
+
+/* Stretch all nav children to full header height so dropdowns anchor
+   to the header's bottom edge via top:100% on the panel. */
+.admin-header__nav {
+  align-items: stretch;
+}
+
+/* Direct links (Comments, Newsletter, etc.) need to re-centre their text
+   now that the nav row uses align-items:stretch instead of center. */
+.admin-header__nav > a {
+  display: flex;
+  align-items: center;
+}
+
+/* Logout form likewise. */
+.admin-header__logout {
+  display: flex;
+  align-items: center;
+}
+
+/* Wrapper for each dropdown group. */
+.admin-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Top-level trigger link — inherits color:#fff from .admin-header__nav a. */
+.admin-nav-trigger {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.admin-nav-chevron {
+  font-size: 0.6rem;
+  opacity: 0.75;
+  line-height: 1;
+}
+
+/* Dropdown panel — hidden by default. */
+.admin-nav-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 200;
+  min-width: 180px;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  background: #222;
+  border-top: 2px solid #FF6600;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+/* Show on hover (mouse) or when any child holds focus (keyboard). */
+.admin-nav-item:hover .admin-nav-dropdown,
+.admin-nav-item:focus-within .admin-nav-dropdown {
+  display: block;
+}
+
+.admin-nav-dropdown li {
+  list-style: none;
+}
+
+/* Dropdown links — color already set by .admin-header__nav a. */
+.admin-nav-dropdown a {
+  display: block;
+  padding: 8px 16px;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.admin-nav-dropdown a:hover {
+  background: #2e2e2e;
+  border-left: 3px solid #FF6600;
+  padding-left: 13px;
 }

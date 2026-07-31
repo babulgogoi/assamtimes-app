@@ -7,6 +7,7 @@
 <% } %>
 
 <form class="admin-form" method="post" action="<%= item && item.id ? '/admin/menu/' + item.id : '/admin/menu' %>">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <label>
     Label
     <input type="text" name="label" value="<%= item ? item.label : '' %>" required>

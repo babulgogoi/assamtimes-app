@@ -3,32 +3,325 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <% if (process.env.NODE_ENV === 'production') { %>
+  <%
+    // Site-wide opt-out for logged-in admin/author sessions (set in
+    // public.js's shared middleware) — also means an admin previewing
+    // their own unpublished draft never sends a pageview for it, same
+    // reasoning as why that path also skips incrementing views_count.
+    var gaEnabled = process.env.NODE_ENV === 'production' && process.env.GA4_MEASUREMENT_ID &&
+      (typeof isAdmin === 'undefined' || !isAdmin);
+  %>
+  <% if (gaEnabled) { %>
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W3VCJYPSX0"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=<%= process.env.GA4_MEASUREMENT_ID %>"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-W3VCJYPSX0');
+      gtag('config', '<%= process.env.GA4_MEASUREMENT_ID %>', {
+        page_title: document.title,
+        page_location: window.location.href,
+        anonymize_ip: true
+      });
     </script>
   <% } %>
   <title><%= typeof title !== 'undefined' ? title : 'Assam Times' %></title>
-  <link rel="stylesheet" href="/css/style.css">
+  <% if (typeof article !== 'undefined' && article) { %>
+    <%
+      var ogDescription = article.subheadline
+        ? article.subheadline
+        : (article.body ? article.body.replace(/<[^>]*>/g, '').substring(0, 160) : '');
+      var ogImageUrl = process.env.SITE_URL + (article.featured_image || '/uploads/defaults/at-news.png');
+      var ogImageType = /\.png$/i.test(ogImageUrl) ? 'image/png' : 'image/jpeg';
+      var publishedIso = article.published_at ? new Date(article.published_at).toISOString() : undefined;
+      var modifiedIso = article.updated_at ? new Date(article.updated_at).toISOString() : publishedIso;
+      var newsArticleLd = {
+        '@context': 'https://schema.org',
+        '@type': 'NewsArticle',
+        headline: article.title,
+        description: article.subheadline || '',
+        image: ogImageUrl,
+        datePublished: publishedIso,
+        dateModified: modifiedIso,
+        author: { '@type': 'Person', name: article.author_name || 'Assam Times' },
+        publisher: {
+          '@type': 'Organization',
+          name: 'Assam Times',
+          logo: { '@type': 'ImageObject', url: process.env.SITE_URL + '/uploads/branding/logo.jpg' },
+        },
+        url: canonicalUrl,
+      };
+    %>
+    <meta name="description" content="<%= ogDescription %>">
+    <meta property="og:title" content="<%= article.title %>">
+    <meta property="og:description" content="<%= ogDescription %>">
+    <meta property="og:image" content="<%= ogImageUrl %>">
+    <meta property="og:image:type" content="<%= ogImageType %>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="<%= canonicalUrl %>">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="Assam Times">
+    <meta property="fb:app_id" content="489189544945700">
+    <% if (article.published_at) { %>
+      <meta property="article:published_time" content="<%= publishedIso %>">
+    <% } %>
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<%= article.title %>">
+    <meta name="twitter:description" content="<%= ogDescription %>">
+    <meta name="twitter:image" content="<%= ogImageUrl %>">
+    <meta name="twitter:site" content="@assamtimes_">
+    <script type="application/ld+json"><%- JSON.stringify(newsArticleLd).replace(/</g, '\\u003c') %></script>
+    <% if (gaEnabled) { %>
+      <%
+        // JSON.stringify (not the brief's hand-rolled .replace(/'/g, "\\'"))
+        // since a title/author containing a backslash, double quote, or
+        // </script> sequence would otherwise break the script or, worse,
+        // inject into the page — same escaping convention already used
+        // for newsArticleLd above and authorsData in the admin article form.
+        var articleViewParams = {
+          article_id: article.id,
+          article_title: (article.title || '').slice(0, 100),
+          article_category: article.category || '',
+          article_author: article.author_name || '',
+          published_year: article.published_at ? new Date(article.published_at).getFullYear() : null,
+        };
+      %>
+      <script>
+        gtag('event', 'article_view', <%- JSON.stringify(articleViewParams).replace(/</g, '\\u003c') %>);
+      </script>
+    <% } %>
+    <link rel="stylesheet" href="/css/article.min.css">
+  <% } else if (typeof metaDescription !== 'undefined' && metaDescription) { %>
+    <meta name="description" content="<%= metaDescription %>">
+  <% } %>
+  <% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %>
+    <link rel="canonical" href="<%= canonicalUrl %>">
+  <% } %>
+  <link rel="alternate" type="application/rss+xml" title="Assam Times RSS Feed" href="<%= process.env.SITE_URL %>/feed">
+  <link rel="icon" type="image/x-icon" href="/uploads/branding/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/uploads/branding/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/uploads/branding/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/uploads/branding/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#FF6600">
+  <!-- iOS only supports Web Push for a site installed via "Add to Home
+       Screen" (iOS 16.4+), and only treats it as installable/standalone
+       with these — without them this is just a bookmark, and push
+       silently can't work at all. -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Assam Times">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preconnect" href="https://www.googletagmanager.com">
+  <link rel="preconnect" href="https://pagead2.googlesyndication.com">
+  <!-- Hand-picked subset of style.css covering the chrome every page needs
+       immediately (header, fonts, base container) plus the homepage's
+       hero/first-card/grid, so the full sheet below can load without
+       blocking first paint. NOT auto-generated — if those specific rules
+       in style.css change, update this block too or it'll drift stale.
+       CONFIRMED LIVE (2026-06-24, via real CLS measurement) that this had
+       already drifted: .header-date/.header-icons/.header-icon-btn/
+       .header-plus-btn were added to the real header in later sessions
+       (header date, push-subscribe bell, AssamTimes+ icon) but never
+       backported here — those elements rendered unstyled/default-sized
+       until the full sheet loaded ~900ms+ later, then snapped to their
+       real size, moving the whole header (and everything below it,
+       including .site-main) — measured at ~0.68 CLS on every single page
+       load, the dominant cause of the regression this fixed. Same bug,
+       second instance: .mega-menu/.mobile-menu also weren't here, so
+       before the full sheet loads they're plain in-flow visible blocks
+       (their real position:fixed+visibility:hidden lives in the full
+       sheet only) — their full column/nav content briefly renders inline
+       in the page, pushing .site-main down, then jumps back up once
+       hidden. Only showed up intermittently in testing (depends on
+       whether first paint races ahead of the full sheet's onload swap),
+       which is exactly why it's worth having here unconditionally rather
+       than trusting it'll usually be fast enough. (style.min.css loads as
+       a plain blocking <link> now, not async — see the 2026-07-03 FOUC
+       fix — so the original CLS scenario above can't recur the same way;
+       this block is a supplementary safety net at this point, not a hard
+       requirement, but still real: DRIFTED A 4TH TIME 2026-07-27 — the
+       header's two-color split (.header-left orange/.header-right black)
+       was built in style.css without updating this block, and the stale
+       duplicate here didn't just render pre-fix styling, it actively
+       broke the real stylesheet's fix: this block's old `.header-left
+       {flex:1}` and the real stylesheet's newer `.header-left
+       {flex-shrink:0}` are a shorthand/longhand pair, and per-property
+       cascade resolution meant the real rule's flex-shrink:0 won but
+       flex-grow:1/flex-basis:0% silently survived from here since nothing
+       later re-declared them — .header-left grew to ~half the header
+       instead of hugging its content. Fixed by syncing this block AND by
+       making the real rule a full `flex:0 0 auto` shorthand so it can't
+       be partially overridden by a stale duplicate like this again.) -->
+  <style>
+    *{box-sizing:border-box}
+    :root{--font-headline:'Arial Narrow',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;--font-body:Georgia,'Times New Roman',serif;--divider-color:#e0e0e0}
+    h1,h2,h3{font-family:var(--font-headline)}
+    body{margin:0;font-family:var(--font-body);color:#1a1a1a;background:#fff}
+    .site-header{position:sticky;top:0;z-index:100}
+    .site-header__inner{max-width:1084px;margin:0 auto;display:flex;align-items:stretch;padding:0;height:auto;gap:0}
+    .header-left{display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;max-width:410px;background-color:#FF6600;padding:3px 0 3px 16px}
+    .header-right{display:flex;align-items:center;flex:1;min-width:0;background-color:#fff;padding:3px 16px 3px 10px}
+    .hamburger-btn{width:44px;height:65px;flex-shrink:0}
+    .site-logo-link{display:flex;align-items:center;text-decoration:none;min-width:0}
+    .site-logo{height:65px;width:auto;max-width:100%;display:block;transition:height .2s ease}
+    .header-date{font-size:.78rem;color:#000;font-weight:700;white-space:nowrap;border-left:1px solid rgba(0,0,0,.2);padding-left:12px;margin-left:4px}
+    .header-icons{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:auto}
+    .header-icon-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.15);border-radius:50%;color:#000;cursor:pointer;font-size:1rem;flex-shrink:0}
+    .header-plus-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;text-decoration:none;flex-shrink:0;position:relative}
+    .mega-menu{position:fixed;inset:0;z-index:500;visibility:hidden;pointer-events:none}
+    .mobile-menu{display:none;position:fixed;top:0;left:0;width:100%;z-index:400;visibility:hidden;pointer-events:none}
+    .site-main{max-width:1084px;margin:0 auto;padding:40px 1.5rem 1.5rem;border-left:2px solid var(--divider-color);border-right:2px solid var(--divider-color)}
+    .home-layout{display:grid;grid-template-columns:650px 350px;gap:2rem}
+    .category-section{margin-top:2.5rem;padding-top:1.75rem}
+    .home-stack>.category-section:first-child{margin-top:0;padding-top:0;border-top:none}
+    .category-section__row--hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+    .category-section__quad-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem}
+    .category-section__row--grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem}
+    .editors-picks__row1{display:grid;grid-template-columns:3fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+    .story-card{min-width:0}
+    .story-card__link{display:block;color:inherit;text-decoration:none}
+    .story-card__media{position:relative}
+    .story-card__image{width:100%;height:160px;object-fit:cover;display:block}
+    .story-card--large .story-card__image{height:335px}
+    .story-card--small .story-card__image{height:120px}
+    .story-card--split .story-card__link{display:grid;grid-template-columns:7fr 3fr}
+    .story-card--split .story-card__image{width:100%;aspect-ratio:4/3;height:auto;object-fit:cover;display:block}
+    .story-card__title{font-family:var(--font-headline);font-size:1.2rem;line-height:1.25;margin:.6rem 0 .3rem}
+    .story-card--large .story-card__title{font-size:1.9rem}
+    .story-card__meta{font-size:.8rem;color:#666;margin:0}
+    .article-detail__image{width:100%;height:auto;object-fit:cover;margin:1rem 0 1.25rem}
+    .sidebar-author-article,.sidebar-related-article,.sidebar-article{margin-bottom:16px;overflow:hidden}
+    .sidebar-article-thumb{float:right;margin:0 0 4px 12px}
+    .sidebar-author-article img,.sidebar-related-article img,.sidebar-article img{width:150px;height:90px;object-fit:cover;display:block}
+    .sidebar-author-article-info h4,.sidebar-related-article-info h4,.sidebar-article-info h4{font-size:.82rem;margin:0 0 3px 0;line-height:1.3}
+    .sidebar-article-desc{font-size:.8rem;color:#666;line-height:1.4;margin:0 0 4px}
+    .article-meta{font-size:.8rem;color:#666}
+    .sidebar-author-article-info .article-meta,.sidebar-related-article-info .article-meta,.sidebar-article-info .article-meta{font-size:.72rem;color:#888}
+    .article-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem}
+    .page-title{text-transform:uppercase;border-bottom:3px solid #1a1a1a;padding-bottom:.75rem;margin-bottom:1.5rem}
+    .home-sidebar__heading{margin-top:0;text-transform:uppercase;font-size:1rem;border-bottom:2px solid #1a1a1a;padding-bottom:.5rem}
+    .search-result{padding:16px 0;border-bottom:1px solid #eee}
+    @media (max-width:600px){
+      .header-left{padding:3px 0 3px 10px;max-width:none}
+      .header-right{padding:3px 10px 3px 10px}
+      .site-logo{height:40px}
+      .hamburger-btn{height:40px}
+      .header-date{display:none}
+      .header-icon-btn{width:32px;height:32px;font-size:.9rem}
+    }
+    @media (max-width:480px){
+      .category-section__quad-grid{grid-template-columns:1fr}
+      .category-section__row--grid{grid-template-columns:1fr}
+      .article-grid{grid-template-columns:1fr}
+    }
+    @media (max-width:768px){
+      .home-layout{grid-template-columns:1fr}
+      .category-section__row--hero-grid{grid-template-columns:1fr}
+      .editors-picks__row1{grid-template-columns:1fr}
+      .category-section__row--grid{grid-template-columns:repeat(2,1fr)}
+      .article-grid{grid-template-columns:repeat(2,1fr)}
+    }
+  </style>
+  <link rel="stylesheet" href="/css/style.min.css">
   <% if (typeof adsenseClientId !== 'undefined' && adsenseClientId) { %>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=<%= adsenseClientId %>" crossorigin="anonymous"></script>
+    <!-- Auto ads off, page-level only — the 3 manual units (header/sidebar/in-article)
+         each push their own slot separately and are unaffected by this. -->
+    <script>(adsbygoogle = window.adsbygoogle || []).push({ google_ad_client: "<%= adsenseClientId %>", enable_page_level_ads: false });</script>
   <% } %>
 </head>
 <body>
-  <%- include('partials/ads-header') %>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <!-- Re-applies dark mode / high contrast (if previously toggled, see
+       article.js) before anything below paints, so there's no flash of
+       the wrong color scheme. Must be the literal first thing inside
+       <body>, and inline/blocking (no defer/async) — an external file
+       would run too late, after the header below has already painted.
+       document.body doesn't exist yet while the parser is still inside
+       <head>, which is why this can't live there despite that being the
+       more typical place for this kind of snippet. -->
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('at_darkmode') === '1') {
+          document.body.classList.add('dark-mode');
+        }
+        if (localStorage.getItem('at_highcontrast') === '1') {
+          document.body.classList.add('high-contrast');
+        }
+      } catch (e) {
+        // ignore — worst case the page flashes light before article.js re-applies it
+      }
+    })();
+  </script>
+  <!-- Header ad slot disabled site-wide for now — flip false to true to
+       bring it back. hideHeaderAd (passed by the home controller) is left
+       in place so the homepage stays ad-free even after this returns
+       elsewhere. -->
+  <% if (false && (typeof hideHeaderAd === 'undefined' || !hideHeaderAd)) { %>
+    <%- include('partials/ads-header') %>
+  <% } %>
+  <div id="headerSentinel" style="height: 1px;"></div>
   <%- include('partials/header') %>
+  <%- include('partials/mega-menu') %>
+  <div id="mobileMenu" class="mobile-menu" aria-hidden="true" role="dialog" aria-label="Mobile navigation">
+    <nav class="mobile-menu__nav">
+      <a href="/">Home</a>
+      <a href="/page/about-us-8">About Us</a>
+      <a href="/page/join-us">Team Up</a>
+      <a href="/news">News</a>
+      <a href="/on-this-day">On This Day</a>
+    </nav>
+    <div class="mobile-menu__backdrop" id="mobileMenuBackdrop"></div>
+  </div>
 
-  <main class="site-main">
+  <% if (typeof breakingArticles !== 'undefined' && breakingArticles.length) { %>
+    <div class="breaking-news-bar" id="breakingBar" data-article-id="<%= breakingArticles[0].id %>">
+      <div class="breaking-news-inner">
+        <span class="breaking-label">BREAKING</span>
+        <div class="breaking-ticker" id="breakingTicker">
+          <% breakingArticles.forEach(function (article, i) { %>
+            <a href="/article/<%= article.slug %>"
+               class="ticker-item<%= i === 0 ? ' active' : '' %>"
+               style="<%= i === 0 ? '' : 'display:none' %>"><%= article.title %></a>
+          <% }) %>
+        </div>
+        <button type="button" id="breakingDismiss" aria-label="Dismiss breaking news" title="Dismiss">&#10005;</button>
+      </div>
+    </div>
+    <!-- Removing a previously-dismissed bar has to happen here, inline and
+         blocking, not in header.js (loaded with `defer`, which runs after
+         the browser has already painted this bar in its default visible
+         state) — same reasoning as the dark-mode anti-flash script above.
+         Measured this directly: a returning visitor who'd dismissed
+         breaking news on an earlier page view got an extra ~0.02-0.03 CLS
+         on every subsequent page load from header.js hiding the bar after
+         first paint. Using .remove() (not display:none) so header.js's own
+         `if (!bar) return` guard skips ticker/dismiss-button setup for
+         free — there's nothing left to wire up once the bar's gone. -->
+    <script>
+      (function () {
+        try {
+          var bar = document.getElementById('breakingBar');
+          if (bar && sessionStorage.getItem('breakingDismissed') === bar.getAttribute('data-article-id')) {
+            bar.remove();
+          }
+        } catch (e) {
+          // ignore — sessionStorage can throw in sandboxed/private contexts; worst case it stays visible
+        }
+      })();
+    </script>
+  <% } %>
+
+  <main class="site-main" id="main-content">
     <%- body %>
   </main>
 
   <%- include('partials/footer') %>
 
-  <script src="/js/header.js" defer></script>
+  <script src="/js/<%= process.env.NODE_ENV === 'production' ? 'header.min.js' : 'header.js' %>" defer></script>
+  <script src="/js/<%= process.env.NODE_ENV === 'production' ? 'push.min.js' : 'push.js' %>" defer></script>
+  <script src="/js/<%= process.env.NODE_ENV === 'production' ? 'mega-menu.min.js' : 'mega-menu.js' %>" defer></script>
 </body>
 </html>

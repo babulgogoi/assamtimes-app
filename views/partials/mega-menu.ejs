@@ -1,0 +1,89 @@
+<div id="megaMenu" class="mega-menu" role="dialog" aria-modal="true" aria-label="Navigation menu" aria-hidden="true">
+  <div class="mega-menu__panel">
+    <div class="mega-menu__topbar">
+      <button id="btnMenuClose" class="mega-close" type="button" aria-label="Close menu">&times;</button>
+      <a href="/" class="mega-logo">
+        <img src="/uploads/branding/logo.jpg" alt="Assam Times" height="38">
+      </a>
+    </div>
+
+    <div class="mega-menu__grid">
+      <div class="mega-col">
+        <h3 class="mega-col__heading">Menu</h3>
+        <ul>
+          <% (typeof menuItems !== 'undefined' ? menuItems : []).forEach(function (item) { %>
+            <% if (item.url) { %>
+              <li><a href="<%= item.url %>"><%= item.label %></a></li>
+            <% } %>
+          <% }) %>
+        </ul>
+      </div>
+
+      <div class="mega-col">
+        <h3 class="mega-col__heading">Categories</h3>
+        <ul>
+          <%
+            // Wikileaks is a real published category (kept fully working at
+            // /category/Wikileaks if linked directly) but deliberately
+            // excluded from this nav-only listing — filtered here, not in
+            // articlesModel.getDistinctPublishedCategories(), so anything
+            // else that reuses that model function later still gets the
+            // true full list.
+            var visibleCategories = (typeof categories !== 'undefined' ? categories : [])
+              .filter(function (cat) { return cat.toLowerCase() !== 'wikileaks'; });
+          %>
+          <% visibleCategories.forEach(function (cat) { %>
+            <li><a href="/category/<%= encodeURIComponent(cat) %>"><%= cat %></a></li>
+          <% }) %>
+        </ul>
+      </div>
+
+      <div class="mega-col">
+        <h3 class="mega-col__heading">Reader Tools</h3>
+        <ul>
+          <li><a href="/subscribe"><span aria-hidden="true">&#128231;</span> Newsletter</a></li>
+          <li><a href="/subscribe"><span aria-hidden="true">&#128276;</span> Push Alerts</a></li>
+          <li><a href="/most-read"><span aria-hidden="true">&#128200;</span> Most Read</a></li>
+          <li><a href="/on-this-day"><span aria-hidden="true">&#128197;</span> On This Day</a></li>
+          <li><a href="/accessibility"><span aria-hidden="true">&#9855;</span> Accessibility</a></li>
+          <li><a href="/feed"><span aria-hidden="true">&#128240;</span> RSS Feed</a></li>
+        </ul>
+        <div class="mega-search">
+          <h3 class="mega-col__heading" style="margin-top:20px">Search</h3>
+          <form action="/search" method="GET">
+            <input type="text" name="q" placeholder="Search 23,000+ articles..." aria-label="Search articles">
+            <button type="submit" aria-label="Submit search">&rarr;</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="mega-col">
+        <h3 class="mega-col__heading">Follow Us</h3>
+        <ul class="mega-social">
+          <li>
+            <a href="<%= (typeof siteFacebookUrl !== 'undefined' && siteFacebookUrl) || '#' %>" target="_blank" rel="noopener" aria-label="Follow on Facebook">
+              <span aria-hidden="true">&#128216;</span> Facebook
+            </a>
+          </li>
+          <li>
+            <a href="https://twitter.com/assamtimes_" target="_blank" rel="noopener" aria-label="Follow on X">
+              <span aria-hidden="true">&#120143;</span> X / Twitter
+            </a>
+          </li>
+          <li>
+            <a href="https://www.youtube.com/@assamtimes" target="_blank" rel="noopener" aria-label="Follow on YouTube">
+              <span aria-hidden="true">&#9654;</span> YouTube
+            </a>
+          </li>
+          <li>
+            <a href="/feed" aria-label="RSS Feed">
+              <span aria-hidden="true">&#128225;</span> RSS Feed
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="mega-menu__backdrop" id="menuBackdrop"></div>
+</div>

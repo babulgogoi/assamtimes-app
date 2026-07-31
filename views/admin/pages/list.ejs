@@ -22,6 +22,7 @@
         <td><%= page.updated_at ? new Date(page.updated_at).toLocaleDateString('en-IN') : '—' %></td>
         <td>
           <form method="post" action="/admin/pages/<%= page.id %>/delete" onsubmit="return confirm('Delete this page? This cannot be undone.');">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
           </form>
         </td>

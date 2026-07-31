@@ -1,26 +1,54 @@
 <header class="site-header">
   <div class="site-header__inner">
-    <a class="site-header__logo" href="/">
-      <img src="/uploads/branding/logo.jpg" alt="Assam Times">
-    </a>
+    <div class="header-left">
+      <button class="hamburger-btn" id="btnHamburger" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="megaMenu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
 
-    <button class="site-header__menu-toggle" id="menuToggle" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="siteNav">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
+      <a class="site-logo-link" href="/">
+        <picture>
+          <source srcset="/uploads/branding/logo.webp" type="image/webp">
+          <img class="site-logo" src="/uploads/branding/logo.jpg" width="350" height="72" alt="Assam Times - Community Newspaper">
+        </picture>
+      </a>
+    </div>
 
-    <nav class="site-header__nav" id="siteNav">
-      <% if (typeof menuItems !== 'undefined') { %>
-        <% menuItems.forEach(function (item) { %>
-          <% if (item.url) { %>
-            <a href="<%= item.url %>"><%= item.label %></a>
-          <% } %>
-        <% }) %>
-      <% } %>
-    </nav>
-    <form class="site-header__search" action="/search" method="get">
-      <input type="search" name="q" placeholder="Search...">
+    <%# Right section: date onward — black/white only, no orange (see
+        .header-right/.header-icons in style.css). .header-date moved here
+        from .header-left so the color boundary lands right after the logo. %>
+    <div class="header-right">
+      <div class="header-date"><%= new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) %></div>
+
+      <div class="header-icons">
+        <% if (typeof vapidPublicKey !== 'undefined' && vapidPublicKey) { %>
+          <button class="header-icon-btn js-push-subscribe" type="button" aria-label="Subscribe to push notifications" title="Subscribe" hidden data-vapid-key="<%= vapidPublicKey %>">
+            <%- include('icons/bell') %>
+          </button>
+        <% } %>
+
+        <button class="header-icon-btn" id="searchToggle" type="button" aria-label="Open search" title="Search" aria-expanded="false" aria-controls="siteSearchBar">
+          <%- include('icons/search') %>
+        </button>
+
+        <a href="/subscribe" class="header-plus-btn" aria-label="Subscribe to AssamTimes+" title="Subscribe to AssamTimes+">
+          <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" width="36" height="36" aria-hidden="true">
+            <circle cx="20" cy="20" r="20" fill="#000000"/>
+            <rect x="17" y="8" width="6" height="24" rx="2" fill="#ffffff"/>
+            <rect x="8" y="17" width="24" height="6" rx="2" fill="#ffffff"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="site-search-bar" id="siteSearchBar" hidden>
+    <form class="site-search-bar__form" action="/search" method="get" role="search">
+      <input type="search" name="q" placeholder="Search 23,000+ articles..." aria-label="Search articles" id="siteSearchInput">
+      <button type="submit" class="site-search-bar__submit" aria-label="Submit search">
+        <%- include('icons/search') %>
+      </button>
     </form>
   </div>
 </header>

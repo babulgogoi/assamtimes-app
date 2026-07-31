@@ -1,6 +1,7 @@
 <h1>Settings</h1>
 
 <form class="admin-form" method="post" action="/admin/settings">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <label>
     Featured Articles Category <span class="admin-form-hint">(category used for the "Featured Articles" sidebar block on the homepage)</span>
     <input type="text" name="featured_category" value="<%= featuredCategory %>" required>
@@ -12,4 +13,118 @@
   </label>
 
   <button type="submit" class="admin-btn admin-btn--primary">Save</button>
+</form>
+
+<h2>Homepage layout</h2>
+<p class="admin-form-hint">Controls what appears at the top of the homepage, above Editor's Picks. Saving clears the app's homepage cache and purges Cloudflare, so the change is visible on the next load.</p>
+
+<form class="admin-form" method="post" action="/admin/settings/section-designs">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <label>
+    Top section style
+    <select name="design_hero" id="designHero">
+      <option value="A" <%= sectionDesigns.hero === 'A' ? 'selected' : '' %>>Classic — Latest News grid with category tabs</option>
+      <option value="B" <%= sectionDesigns.hero === 'B' ? 'selected' : '' %>>Hero — Lead story, grid, and headlines sidebar</option>
+    </select>
+  </label>
+
+  <%# design_latest_news/latestnews_tabs only affect anything when the top
+      section is "Classic" (design_hero='A') — Hero mode replaces this
+      entire area, so these fields are irrelevant and hidden while it's
+      selected. This div previously claimed to be conditional in its hint
+      text but had no actual show/hide behavior; #latest-news-options now
+      really is, same pattern as #liveblogControls in the article form. %>
+  <div id="latest-news-options" style="<%= sectionDesigns.hero === 'A' ? '' : 'display:none' %>">
+    <label>
+      Latest News layout <span class="admin-form-hint">(the grid style used within the Classic top section)</span>
+      <select name="design_latest_news">
+        <option value="A" <%= sectionDesigns.latestNews === 'A' ? 'selected' : '' %>>Classic — hero card + small grid</option>
+        <option value="B" <%= sectionDesigns.latestNews === 'B' ? 'selected' : '' %>>4-column grid with category tabs</option>
+      </select>
+    </label>
+
+    <label>
+      Latest News tabs <span class="admin-form-hint">(shown when Top section style = Classic and Latest News layout = 4-column grid)</span>
+      <input type="text" name="latestnews_tabs" value="<%= sectionDesigns.latestnewsTabsRaw %>" placeholder="All,Politics,Society,Development">
+    </label>
+    <p class="admin-form-hint">Comma-separated category names. 'All' shows every category.</p>
+  </div>
+
+  <label>
+    Features section style
+    <select name="design_features">
+      <option value="A" <%= sectionDesigns.features === 'A' ? 'selected' : '' %>>Classic grid</option>
+      <option value="B" <%= sectionDesigns.features === 'B' ? 'selected' : '' %>>Lead story with thumbnail sidebar</option>
+    </select>
+  </label>
+
+  <input type="hidden" name="design_editors_picks" value="<%= sectionDesigns.editorsPicks %>">
+
+  <h2>Article page layout</h2>
+  <p class="admin-form-hint">Applies to every article page, independent of the homepage settings above.</p>
+
+  <label>
+    Article page style
+    <select name="design_article">
+      <option value="A" <%= sectionDesigns.article === 'A' ? 'selected' : '' %>>Classic — sidebar with related content</option>
+      <option value="B" <%= sectionDesigns.article === 'B' ? 'selected' : '' %>>Editorial — centered column, related content below the article</option>
+    </select>
+  </label>
+
+  <h2>Homepage embed widget</h2>
+  <p class="admin-form-hint">
+    Shows between Features and Editor's Picks. Paste an iframe embed code (charts, maps, etc).
+    Only paste code from sources you trust — this renders directly on the live homepage with no sanitisation.
+  </p>
+
+  <label class="admin-checkbox">
+    <input type="checkbox" name="homepage_embed_enabled" <%= sectionDesigns.homepageEmbedEnabled ? 'checked' : '' %>>
+    Show embed widget on homepage
+  </label>
+
+  <label>
+    Embed code
+    <textarea name="homepage_embed_html" rows="6" style="width:100%;font-family:monospace;font-size:12px" placeholder='<iframe src="..." style="width:100%;height:600px;border:0"></iframe>'><%= sectionDesigns.homepageEmbedHtml || '' %></textarea>
+  </label>
+
+  <button type="submit" class="admin-btn admin-btn--primary">Save Section Designs</button>
+</form>
+
+<script>
+  (function () {
+    var heroSelect = document.getElementById('designHero');
+    var latestNewsOptions = document.getElementById('latest-news-options');
+    if (!heroSelect || !latestNewsOptions) return;
+    heroSelect.addEventListener('change', function () {
+      latestNewsOptions.style.display = heroSelect.value === 'A' ? '' : 'none';
+    });
+  })();
+</script>
+
+<h2>Cache</h2>
+
+<% if (typeof cachePurged !== 'undefined' && cachePurged) { %>
+  <p class="admin-social-status admin-social-status--ok">&#10003; App cache purged</p>
+<% } %>
+
+<p class="admin-form-hint">Clears the app's in-memory homepage/category page cache so the next visit re-renders fresh.</p>
+<form method="post" action="/admin/settings/purge-cache">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <button type="submit" class="admin-btn admin-btn--primary">Purge App Cache</button>
+</form>
+
+<br>
+
+<% if (typeof cfPurged !== 'undefined' && cfPurged) { %>
+  <p class="admin-social-status admin-social-status--ok">&#10003; Cloudflare cache purged</p>
+<% } %>
+<% if (typeof cfPurgeError !== 'undefined' && cfPurgeError) { %>
+  <p class="admin-social-status admin-social-status--error">&#10007; Cloudflare purge failed — check CF_API_TOKEN in .env</p>
+<% } %>
+
+<p class="admin-form-hint">Purges the entire Cloudflare edge cache (purge_everything). Use after bulk changes or template edits.</p>
+<form method="post" action="/admin/settings/purge-cloudflare">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <button type="submit" class="admin-btn admin-btn--secondary">Purge Cloudflare Cache</button>
 </form>

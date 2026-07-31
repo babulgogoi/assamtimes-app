@@ -12,6 +12,7 @@
 <% } %>
 
 <form class="admin-form" method="post" action="<%= author && author.id ? '/admin/authors/' + author.id : '/admin/authors' %>" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <label>
     Username
     <input type="text" name="username" value="<%= author ? author.username : '' %>" required>
@@ -39,7 +40,7 @@
       <label class="admin-checkbox"><input type="checkbox" name="remove_photo" value="1"> Remove current photo</label>
       <input type="hidden" name="existing_photo" value="<%= author.photo %>">
     <% } %>
-    <input type="file" name="photo" accept="image/*">
+    <input type="file" name="photo" accept=".jpg,.jpeg,.png,.gif,.webp">
   </label>
 
   <p class="admin-form-hint">

@@ -1,7 +1,7 @@
 <div class="home-layout">
   <div class="home-main">
     <div class="author-header">
-      <img class="author-header__photo" src="<%= author.photo || '/uploads/defaults/avatar.png' %>" alt="<%= author.display_name || author.username %>">
+      <img class="author-header__photo" src="<%= author.photo || '/uploads/defaults/avatar.png' %>" alt="<%= (author.display_name || author.username) %>, journalist at Assam Times">
       <div>
         <h1 class="author-header__name"><%= author.display_name || author.username %></h1>
         <% if (author.bio) { %>
@@ -15,15 +15,18 @@
     <% } else { %>
       <div class="article-grid">
         <% articles.forEach(function (article) { %>
-          <article class="article-card">
-            <a href="/article/<%= article.slug %>">
-              <img class="article-card__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.title %>">
-              <h2 class="article-card__title"><%= article.title %></h2>
+          <article class="story-card story-card--medium">
+            <a class="story-card__link" href="/article/<%= article.slug %>">
+              <div class="story-card__media">
+                <img class="story-card__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.title %>">
+                <% if (article.category) { %>
+                  <span class="story-card__tag"><%= article.category %></span>
+                <% } %>
+              </div>
+              <h2 class="story-card__title"><%= article.title %></h2>
             </a>
-            <p class="article-meta">
-              <% if (article.category) { %>
-                in <a href="/category/<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
-              <% } %>
+            <p class="story-card__meta">
+              <%= article.published_at ? new Date(article.published_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '' %>
             </p>
           </article>
         <% }) %>
@@ -39,9 +42,22 @@
         <% } %>
       </nav>
     <% } %>
+
+    <% if (typeof contributedArticles !== 'undefined' && contributedArticles.length) { %>
+      <section class="author-contributed">
+        <h3>Also contributed to</h3>
+        <% contributedArticles.forEach(function (a) { %>
+          <div class="contrib-item">
+            <a href="/article/<%= a.slug %>"><%= a.title %></a>
+            <span class="contrib-role">(<%= a.role %>)</span>
+            <span class="article-meta"><%= a.published_at ? new Date(a.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '' %></span>
+          </div>
+        <% }) %>
+      </section>
+    <% } %>
   </div>
 
-  <aside class="home-sidebar">
+  <aside class="home-sidebar divider-v">
     <%- include('../partials/sidebar-most-read') %>
   </aside>
 </div>

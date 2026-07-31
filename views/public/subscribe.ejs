@@ -1,0 +1,33 @@
+<div class="subscribe-brand">
+  <svg width="32" height="32" viewBox="0 0 40 40" aria-hidden="true">
+    <circle cx="20" cy="20" r="20" fill="#FF6600"/>
+    <rect x="17" y="8" width="6" height="24" rx="2" fill="#fff"/>
+    <rect x="8" y="17" width="24" height="6" rx="2" fill="#fff"/>
+  </svg>
+  <h1>AssamTimes<span style="color:#FF6600">+</span></h1>
+  <p>Subscribe for newsletters and breaking news alerts</p>
+</div>
+<p class="subscribe-intro">Get the latest Assam Times news however you like — by email or instant browser alerts. No spam, unsubscribe anytime.</p>
+
+<div class="subscribe-sections">
+  <section class="subscribe-section">
+    <h2 class="subscribe-section__heading">Email Newsletter</h2>
+    <p>Get a roundup of top stories straight to your inbox.</p>
+
+    <%- include('../partials/newsletter-form', { returnTo: '/subscribe', newsletterStatus: typeof newsletterStatus !== 'undefined' ? newsletterStatus : null }) %>
+  </section>
+
+  <section class="subscribe-section">
+    <h2 class="subscribe-section__heading">Browser Push Notifications</h2>
+    <p>Get instant alerts for breaking news, right in your browser — no email required.</p>
+
+    <% if (typeof vapidPublicKey !== 'undefined' && vapidPublicKey) { %>
+      <button type="button" class="subscribe-push-btn js-push-subscribe" hidden data-vapid-key="<%= vapidPublicKey %>" aria-label="Subscribe to push notifications" title="Subscribe">
+        <%- include('../partials/icons/bell') %>
+        <span class="subscribe-push-btn__label">Enable Browser Notifications</span>
+      </button>
+    <% } else { %>
+      <p><em>Push notifications aren't available right now.</em></p>
+    <% } %>
+  </section>
+</div>

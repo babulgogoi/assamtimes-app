@@ -1,0 +1,70 @@
+<%# Shared between Design A and Design B (see article.ejs) — the caller
+    wraps this in whatever container it needs; the id="comments" anchor
+    that every "Comments" jump link/button on the page targets lives on
+    the <section> itself, not the caller's wrapper, so there's only ever
+    one #comments in the DOM regardless of which design is active. %>
+<section class="comments" id="comments">
+  <h2 class="comments__heading">Comments (<%= commentsCount %>)</h2>
+
+  <% if (comments.length) { %>
+    <ol class="comments__list">
+      <% comments.forEach(function (c) { %>
+        <li class="comment">
+          <div class="comment__meta">
+            <span class="comment__author"><%= c.author_name %></span>
+            <span class="comment__date"><%= new Date(c.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+          </div>
+          <p class="comment__body"><%= c.body %></p>
+        </li>
+      <% }) %>
+    </ol>
+  <% } else { %>
+    <p class="comments__empty">No comments yet. Be the first to share your thoughts.</p>
+  <% } %>
+
+  <div class="comment-form">
+    <h3 class="comment-form__heading">Leave a Comment</h3>
+
+    <% if (commentSubmitted) { %>
+      <p class="comment-form__success">Your comment has been submitted and is awaiting moderation.</p>
+    <% } else { %>
+      <%
+        var hasCommentErrors = !!(commentErrors && commentErrors.length);
+        var errorsId = 'commentFormErrors';
+      %>
+      <% if (hasCommentErrors) { %>
+        <ul class="comment-form__errors" id="<%= errorsId %>" role="alert">
+          <% commentErrors.forEach(function (e) { %><li><%= e %></li><% }) %>
+        </ul>
+      <% } %>
+
+      <form class="comment-form__fields" method="post" action="/article/<%= article.slug %>/comments">
+        <label class="comment-form__field">
+          Name
+          <input type="text" name="name" required value="<%= commentForm ? commentForm.name : '' %>"<%- hasCommentErrors ? ' aria-describedby="' + errorsId + '"' : '' %>>
+        </label>
+
+        <label class="comment-form__field">
+          Email <span class="comment-form__hint">(never shown publicly)</span>
+          <input type="email" name="email" required value="<%= commentForm ? commentForm.email : '' %>"<%- hasCommentErrors ? ' aria-describedby="' + errorsId + '"' : '' %>>
+        </label>
+
+        <label class="comment-form__field">
+          Comment
+          <textarea name="body" rows="5" required<%- hasCommentErrors ? ' aria-describedby="' + errorsId + '"' : '' %>><%= commentForm ? commentForm.body : '' %></textarea>
+        </label>
+
+        <div class="comment-form__honeypot" aria-hidden="true">
+          <label for="comment_website">Website</label>
+          <input type="text" id="comment_website" name="website" tabindex="-1" autocomplete="off">
+        </div>
+
+        <div class="h-captcha" data-sitekey="<%= hcaptchaSiteKey %>"></div>
+
+        <button type="submit" class="comment-form__submit">Submit Comment</button>
+      </form>
+
+      <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    <% } %>
+  </div>
+</section>

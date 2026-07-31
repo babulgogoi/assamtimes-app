@@ -1,0 +1,80 @@
+<% if (articles && articles.length) { %>
+  <%
+    function formatCardDate(d) {
+      return d ? new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+    }
+  %>
+  <section class="category-section divider-h" aria-label="<%= categoryName %>">
+    <% if (showHeader) { %>
+      <a class="category-section__title" href="/category/<%= encodeURIComponent(categoryName) %>"><%= categoryName %></a>
+    <% } %>
+
+    <div class="category-section__row category-section__row--hero-grid">
+      <% var featured = articles[0]; %>
+      <article class="story-card story-card--large">
+        <a class="story-card__link" href="/article/<%= featured.slug %>">
+          <div class="story-card__media">
+            <picture>
+              <source media="(max-width: 600px)" srcset="<%= mobileHeroUrl(featured.featured_image) %>" width="520" height="350">
+              <img class="story-card__image" src="<%= largeUrl(featured.featured_image) %>" width="460" height="335" alt="<%= featured.title %>"<%- eagerHero ? ' loading="eager" fetchpriority="high"' : ' loading="lazy"' %>>
+            </picture>
+          </div>
+          <h2 class="story-card__title">
+            <% if (featured.is_liveblog) { %><span class="liveblog-badge<%= featured.liveblog_status === 'live' ? ' is-live' : '' %>"><%= featured.liveblog_status === 'live' ? '&#128308; LIVE' : 'LIVE BLOG' %></span><% } %>
+            <%= featured.title %>
+          </h2>
+        </a>
+        <p class="story-card__meta">
+          <%= formatCardDate(featured.published_at) %> &middot; <%= featured.views_count %> views
+        </p>
+      </article>
+
+      <div class="category-section__quad-grid">
+        <% articles.slice(1, 5).forEach(function (article) { %>
+          <article class="story-card story-card--small">
+            <a class="story-card__link" href="/article/<%= article.slug %>">
+              <div class="story-card__media">
+                <picture>
+                  <source media="(max-width: 600px)" srcset="<%= mobileThumbUrl(article.featured_image) %>" width="515" height="200">
+                  <img class="story-card__image" src="<%= thumbUrl(article.featured_image) %>" width="230" height="120" alt="<%= article.title %>" loading="lazy">
+                </picture>
+              </div>
+              <h3 class="story-card__title">
+                <% if (article.is_liveblog) { %><span class="liveblog-badge<%= article.liveblog_status === 'live' ? ' is-live' : '' %>"><%= article.liveblog_status === 'live' ? '&#128308; LIVE' : 'LIVE BLOG' %></span><% } %>
+                <%= article.title %>
+              </h3>
+            </a>
+            <p class="story-card__meta">
+              <%= formatCardDate(article.published_at) %> &middot; <%= article.views_count %> views
+            </p>
+          </article>
+        <% }) %>
+      </div>
+    </div>
+
+    <% var row2 = articles.slice(5, 9); %>
+    <% if (row2.length) { %>
+      <div class="category-section__row category-section__row--grid">
+        <% row2.forEach(function (article) { %>
+          <article class="story-card story-card--small">
+            <a class="story-card__link" href="/article/<%= article.slug %>">
+              <div class="story-card__media">
+                <picture>
+                  <source media="(max-width: 600px)" srcset="<%= mobileThumbUrl(article.featured_image) %>" width="515" height="200">
+                  <img class="story-card__image" src="<%= thumbUrl(article.featured_image) %>" width="230" height="120" alt="<%= article.title %>" loading="lazy">
+                </picture>
+              </div>
+              <h3 class="story-card__title">
+                <% if (article.is_liveblog) { %><span class="liveblog-badge<%= article.liveblog_status === 'live' ? ' is-live' : '' %>"><%= article.liveblog_status === 'live' ? '&#128308; LIVE' : 'LIVE BLOG' %></span><% } %>
+                <%= article.title %>
+              </h3>
+            </a>
+            <p class="story-card__meta">
+              <%= formatCardDate(article.published_at) %> &middot; <%= article.views_count %> views
+            </p>
+          </article>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+<% } %>

@@ -1,0 +1,89 @@
+<div class="admin-list-header">
+  <h1>Newsletter Subscribers (<%= total %>)</h1>
+  <a class="admin-btn admin-btn--primary" href="/admin/newsletter/export.csv<%= search ? '?q=' + encodeURIComponent(search) : '' %>">Export CSV</a>
+</div>
+
+<div class="admin-stats-row">
+  <div class="admin-stat-box">
+    <div class="admin-stat-box__number"><%= stats.active %></div>
+    <div class="admin-stat-box__label">Active</div>
+  </div>
+  <div class="admin-stat-box">
+    <div class="admin-stat-box__number"><%= stats.unsubscribed %></div>
+    <div class="admin-stat-box__label">Unsubscribed</div>
+  </div>
+</div>
+
+<% if (typeof d7Stats !== 'undefined' && d7Stats.total > 0) { %>
+  <h2>D7 Import</h2>
+  <div class="admin-stats-row">
+    <div class="admin-stat-box">
+      <div class="admin-stat-box__number"><%= d7Stats.total %></div>
+      <div class="admin-stat-box__label">Extracted</div>
+    </div>
+    <div class="admin-stat-box">
+      <div class="admin-stat-box__number"><%= d7Stats.imported %></div>
+      <div class="admin-stat-box__label">Imported</div>
+    </div>
+    <div class="admin-stat-box">
+      <div class="admin-stat-box__number"><%= d7Stats.sent %></div>
+      <div class="admin-stat-box__label">Emails Sent</div>
+    </div>
+    <div class="admin-stat-box">
+      <div class="admin-stat-box__number"><%= d7Stats.bounced %></div>
+      <div class="admin-stat-box__label">Bounced</div>
+    </div>
+    <div class="admin-stat-box">
+      <div class="admin-stat-box__number"><%= d7Stats.pending %></div>
+      <div class="admin-stat-box__label">Pending</div>
+    </div>
+  </div>
+<% } %>
+
+<form method="get" action="/admin/newsletter" class="admin-filter-bar">
+  <input type="text" name="q" placeholder="Search name or email…" value="<%= search %>">
+  <button type="submit" class="admin-btn">Search</button>
+</form>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Status</th>
+      <th>Source</th>
+      <th>Subscribed</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% subscribers.forEach(function (s) { %>
+      <tr>
+        <td><%= s.name || '—' %></td>
+        <td><%= s.email %></td>
+        <td><span class="admin-badge admin-badge--<%= s.status %>"><%= s.status %></span></td>
+        <td><%= s.source || '—' %></td>
+        <td><%= s.subscribed_at ? new Date(s.subscribed_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' %></td>
+        <td>
+          <form method="post" action="/admin/newsletter/<%= s.id %>/delete" onsubmit="return confirm('Remove <%= s.email %>?');">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+    <% if (!subscribers.length) { %>
+      <tr><td colspan="6">No subscribers found.</td></tr>
+    <% } %>
+  </tbody>
+</table>
+
+<nav class="pagination">
+  <% if (page > 1) { %>
+    <a href="/admin/newsletter?q=<%= encodeURIComponent(search) %>&page=<%= page - 1 %>">&laquo; Prev</a>
+  <% } %>
+  <span>Page <%= page %> of <%= totalPages %></span>
+  <% if (page < totalPages) { %>
+    <a href="/admin/newsletter?q=<%= encodeURIComponent(search) %>&page=<%= page + 1 %>">Next &raquo;</a>
+  <% } %>
+</nav>

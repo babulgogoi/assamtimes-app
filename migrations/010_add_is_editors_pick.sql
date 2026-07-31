@@ -1,0 +1,1 @@
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS is_editors_pick BOOLEAN NOT NULL DEFAULT false;

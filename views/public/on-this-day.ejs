@@ -1,0 +1,55 @@
+<div class="otd-page">
+  <div class="otd-header">
+    <div class="otd-header__icon">&#128197;</div>
+    <div>
+      <h1>On This Day</h1>
+      <p class="otd-header__date"><%= dateStr %></p>
+      <p class="otd-header__sub">
+        <%= total %> article<%= total !== 1 ? 's' : '' %> published on this date across
+        <%= years.length %> year<%= years.length !== 1 ? 's' : '' %>
+      </p>
+    </div>
+  </div>
+
+  <% if (!years.length) { %>
+    <div class="no-results">
+      <p>No articles found for today's date in previous years.</p>
+      <p>Check back tomorrow!</p>
+    </div>
+  <% } %>
+
+  <% years.forEach(function (year) { %>
+    <div class="otd-year-section">
+      <div class="otd-year-label">
+        <span><%= year %></span>
+        <span class="otd-year-count"><%= byYear[year].length %> article<%= byYear[year].length !== 1 ? 's' : '' %></span>
+      </div>
+
+      <% byYear[year].forEach(function (article) { %>
+        <div class="otd-article">
+          <% if (article.featured_image) { %>
+            <a href="/article/<%= article.slug %>" class="otd-article__thumb">
+              <img src="<%= thumbUrl(article.featured_image) %>"
+                   onerror="this.onerror=null;this.src='/uploads/defaults/at-news-thumb.jpg'"
+                   width="120" height="80" loading="lazy" alt="<%= article.title %>">
+            </a>
+          <% } %>
+          <div class="otd-article__info">
+            <% if (article.category) { %>
+              <span class="otd-article__category"><%= article.category %></span>
+            <% } %>
+            <h2><a href="/article/<%= article.slug %>"><%= article.title %></a></h2>
+            <% if (article.excerpt) { %>
+              <p class="otd-article__excerpt"><%= article.excerpt %></p>
+            <% } %>
+            <span class="article-meta">
+              <%= article.author_name || 'Assam Times' %> &middot;
+              <%= article.published_at ? new Date(article.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '' %> &middot;
+              <%= (article.views_count || 0).toLocaleString() %> views
+            </span>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% }) %>
+</div>

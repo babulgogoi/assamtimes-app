@@ -30,6 +30,7 @@
         <td><%= item.is_active ? 'Yes' : 'No' %></td>
         <td>
           <form method="post" action="/admin/menu/<%= item.id %>/delete" onsubmit="return confirm('Delete this menu item?');">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
           </form>
         </td>

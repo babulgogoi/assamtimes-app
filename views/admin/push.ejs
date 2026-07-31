@@ -1,0 +1,39 @@
+<h1>Push Notifications</h1>
+
+<div class="admin-stats-row">
+  <div class="admin-stat-box">
+    <div class="admin-stat-box__number"><%= subscriberCount %></div>
+    <div class="admin-stat-box__label">Subscribers</div>
+  </div>
+</div>
+
+<% if (typeof sent !== 'undefined' && sent !== undefined) { %>
+  <p class="admin-social-status admin-social-status--ok">&#10003; Sent to <%= sent %> subscriber<%= Number(sent) === 1 ? '' : 's' %><% if (Number(failed) > 0) { %> (<%= failed %> failed)<% } %></p>
+<% } %>
+
+<% if (typeof errors !== 'undefined' && errors && errors.length) { %>
+  <ul class="admin-form-errors">
+    <% errors.forEach(function (e) { %><li><%= e %></li><% }) %>
+  </ul>
+<% } %>
+
+<form class="admin-form" method="post" action="/admin/push/send">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+  <label>
+    Title
+    <input type="text" name="title" value="<%= typeof form !== 'undefined' && form ? form.title : '' %>" required maxlength="100">
+  </label>
+
+  <label>
+    Body
+    <textarea name="body" rows="4" required maxlength="500"><%= typeof form !== 'undefined' && form ? form.body : '' %></textarea>
+  </label>
+
+  <label>
+    URL <span class="admin-form-hint">(where the notification links to when clicked)</span>
+    <input type="url" name="url" value="<%= typeof form !== 'undefined' && form && form.url ? form.url : process.env.SITE_URL %>" required>
+  </label>
+
+  <button type="submit" class="admin-btn admin-btn--primary">Send to All Subscribers</button>
+</form>

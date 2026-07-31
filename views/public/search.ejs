@@ -1,48 +1,35 @@
-<div class="home-layout">
-  <div class="home-main">
-    <h1 class="page-title">
-      <% if (q) { %>Search results for "<%= q %>"<% } else { %>Search<% } %>
-    </h1>
+  <h1 class="page-title">
+    <% if (!q) { %>Search<% } else if (!articles.length) { %>Search results for "<%= q %>"<% } else { %>Search results for "<%= q %>" (<%= total %> result<%= total === 1 ? '' : 's' %>)<% } %>
+  </h1>
 
-    <% if (tooShort) { %>
-      <p>Please enter at least 2 characters to search.</p>
-    <% } else if (!q) { %>
-      <p>Enter a search term above to find articles.</p>
-    <% } else if (!articles.length) { %>
-      <p>No articles found for "<%= q %>".</p>
-    <% } else { %>
-      <div class="article-grid">
-        <% articles.forEach(function (article) { %>
-          <article class="article-card">
-            <a href="/article/<%= article.slug %>">
-              <img class="article-card__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.title %>">
-              <h2 class="article-card__title"><%= article.title %></h2>
-            </a>
-            <p class="article-meta">
-              <% if (article.author_username) { %>
-                by <a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a>
-              <% } %>
-              <% if (article.category) { %>
-                in <a href="/category/<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
-              <% } %>
-            </p>
-          </article>
-        <% }) %>
+  <% if (tooShort) { %>
+    <p>Please enter at least 2 characters to search.</p>
+  <% } else if (!q) { %>
+    <p>Enter a search term above to find articles.</p>
+  <% } else if (!articles.length) { %>
+    <p>No articles found for "<%= q %>". Try different terms.</p>
+  <% } else { %>
+    <% articles.forEach(function (article) { %>
+      <div class="search-result">
+        <h2><a href="/article/<%= article.slug %>"><%- article.title_highlighted %></a></h2>
+        <div class="meta">
+          <% if (article.author_username) { %><a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a> &middot; <% } %>
+          <%= article.published_at ? new Date(article.published_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '' %>
+          &middot; <%= article.views_count %> views
+        </div>
+        <% if (article.excerpt_highlighted) { %>
+          <div class="excerpt"><%- article.excerpt_highlighted %></div>
+        <% } %>
       </div>
+    <% }) %>
 
-      <nav class="pagination">
-        <% if (page > 1) { %>
-          <a href="/search?q=<%= encodeURIComponent(q) %>&page=<%= page - 1 %>">&laquo; Prev</a>
-        <% } %>
-        <span>Page <%= page %> of <%= totalPages %></span>
-        <% if (page < totalPages) { %>
-          <a href="/search?q=<%= encodeURIComponent(q) %>&page=<%= page + 1 %>">Next &raquo;</a>
-        <% } %>
-      </nav>
-    <% } %>
-  </div>
-
-  <aside class="home-sidebar">
-    <%- include('../partials/sidebar-most-read') %>
-  </aside>
-</div>
+    <nav class="pagination">
+      <% if (page > 1) { %>
+        <a href="/search?q=<%= encodeURIComponent(q) %>&page=<%= page - 1 %>">Previous</a>
+      <% } %>
+      <span>Page <%= page %> of <%= totalPages %></span>
+      <% if (page < totalPages) { %>
+        <a href="/search?q=<%= encodeURIComponent(q) %>&page=<%= page + 1 %>">Next</a>
+      <% } %>
+    </nav>
+  <% } %>

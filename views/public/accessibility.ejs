@@ -1,0 +1,104 @@
+<h1 class="page-title">Accessibility</h1>
+<p class="subscribe-intro">Assam Times is built to be usable by everyone. Here's what's already in place, how to use it, and a way to tell us what's missing.</p>
+
+<section class="accessibility-features">
+  <h2 class="accessibility-features__heading">Built-in Accessibility Features</h2>
+  <dl class="accessibility-features__list">
+    <div class="accessibility-features__item">
+      <dt>Skip to main content</dt>
+      <dd>Press Tab right after a page loads to reveal a "Skip to main content" link, letting keyboard users jump past the header and navigation straight to the page's content.</dd>
+    </div>
+    <div class="accessibility-features__item">
+      <dt>Full keyboard navigation</dt>
+      <dd>Every interactive element — menu, search, share buttons, comments, the forms on this page — is reachable and operable by keyboard alone. Focused elements show a visible orange outline. The mobile menu and search box both close with the Escape key and return focus to the button that opened them.</dd>
+    </div>
+    <div class="accessibility-features__item">
+      <dt>High contrast mode</dt>
+      <dd>On article pages, tap the "HC" button in the utility bar (between the category label and the headline) to switch to a high-contrast color scheme. Your choice is remembered site-wide.</dd>
+    </div>
+    <div class="accessibility-features__item">
+      <dt>Dark mode</dt>
+      <dd>Tap the moon icon in the same utility bar to switch to a dark background with light text. Persists across pages and visits (mutually exclusive with high contrast mode).</dd>
+    </div>
+    <div class="accessibility-features__item">
+      <dt>Adjustable text size</dt>
+      <dd>Use the A-/A/A+ buttons in the utility bar to shrink, reset, or enlarge the article body text.</dd>
+    </div>
+    <div class="accessibility-features__item">
+      <dt>Print-friendly articles</dt>
+      <dd>The Print button opens your browser's print dialog with a clean, print-optimized layout of the article — no ads, navigation, or sidebar.</dd>
+    </div>
+    <div class="accessibility-features__item">
+      <dt>Alt text on images</dt>
+      <dd>Featured images and author photos include descriptive alt text for screen readers.</dd>
+    </div>
+    <div class="accessibility-features__item">
+      <dt>Descriptive labels on icons and buttons</dt>
+      <dd>Every icon-only button (search, share, menu, comments, like, and more) has a label describing what it does, so screen readers announce something meaningful instead of just "button."</dd>
+    </div>
+  </dl>
+</section>
+
+<div class="accessibility-sections">
+  <section class="subscribe-section" id="suggest">
+    <h2 class="subscribe-section__heading">Suggest a Feature</h2>
+    <p>Missing something that would make this site easier to use? Tell us.</p>
+
+    <% if (suggestionStatus === 'success') { %>
+      <p class="newsletter-form__success">Thanks! Your suggestion has been sent to our team.</p>
+    <% } else { %>
+      <% if (suggestionStatus === 'error') { %>
+        <p class="newsletter-form__errors">Please enter a message before submitting.</p>
+      <% } %>
+      <form class="newsletter-form__fields" method="post" action="/accessibility/suggest">
+        <label class="newsletter-form__field">
+          Name <span class="newsletter-form__hint">(optional)</span>
+          <input type="text" name="name">
+        </label>
+
+        <label class="newsletter-form__field">
+          Email <span class="newsletter-form__hint">(optional, in case we want to follow up)</span>
+          <input type="email" name="email">
+        </label>
+
+        <label class="newsletter-form__field">
+          Suggestion
+          <textarea name="message" rows="4" required></textarea>
+        </label>
+
+        <div class="newsletter-form__honeypot" aria-hidden="true">
+          <label for="suggestion_website">Website</label>
+          <input type="text" id="suggestion_website" name="website" tabindex="-1" autocomplete="off">
+        </div>
+
+        <button type="submit" class="newsletter-form__submit">Send Suggestion</button>
+      </form>
+    <% } %>
+  </section>
+
+  <section class="subscribe-section" id="rate">
+    <h2 class="subscribe-section__heading">Rate This Site</h2>
+    <p>How are we doing? Your feedback helps us improve.</p>
+
+    <div class="star-rating" id="starRating" data-average="<%= rating.average %>" data-count="<%= rating.count %>">
+      <div class="star-rating__stars" role="group" aria-label="Rate this site from 1 to 5 stars">
+        <% for (var i = 1; i <= 5; i++) { %>
+          <button type="button" class="star-rating__star" data-value="<%= i %>" aria-label="Rate <%= i %> star<%= i === 1 ? '' : 's' %>">
+            <%- include('../partials/icons/star') %>
+          </button>
+        <% } %>
+      </div>
+      <p class="star-rating__summary" id="starRatingSummary">
+        <%= rating.count ? rating.average.toFixed(1) + ' / 5 average from ' + rating.count + ' rating' + (rating.count === 1 ? '' : 's') : 'No ratings yet — be the first!' %>
+      </p>
+    </div>
+  </section>
+
+  <section class="subscribe-section" id="newsletter">
+    <h2 class="subscribe-section__heading">Email Newsletter</h2>
+    <p>Get a roundup of top stories straight to your inbox.</p>
+    <%- include('../partials/newsletter-form', { returnTo: '/accessibility', newsletterStatus: newsletterStatus }) %>
+  </section>
+</div>
+
+<script src="/js/<%= process.env.NODE_ENV === 'production' ? 'accessibility.min.js' : 'accessibility.js' %>" defer></script>

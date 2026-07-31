@@ -8,6 +8,7 @@
   <select name="status">
     <option value="">All statuses</option>
     <option value="published" <%= status === 'published' ? 'selected' : '' %>>Published</option>
+    <option value="scheduled" <%= status === 'scheduled' ? 'selected' : '' %>>Scheduled</option>
     <option value="draft" <%= status === 'draft' ? 'selected' : '' %>>Draft</option>
   </select>
   <button type="submit" class="admin-btn">Filter</button>
@@ -18,6 +19,7 @@
     <tr>
       <th>Title</th>
       <th>Category</th>
+      <th>Dateline</th>
       <th>Status</th>
       <th>Author</th>
       <th>Published</th>
@@ -28,21 +30,68 @@
   <tbody>
     <% articles.forEach(function (article) { %>
       <tr>
-        <td><a href="/admin/articles/<%= article.id %>/edit"><%= article.title %></a></td>
+        <td>
+          <a href="/admin/articles/<%= article.id %>/edit"><%= article.title %></a>
+          <% if (article.is_advertisement) { %>
+            <span style="font-size:10px;background:#fff3cd;color:#856404;padding:1px 6px;border-radius:3px;margin-left:6px">AD</span>
+          <% } %>
+        </td>
         <td><%= article.category || '—' %></td>
-        <td><span class="admin-badge admin-badge--<%= article.status %>"><%= article.status %></span></td>
+        <td style="color:<%= article.dateline ? 'inherit' : '#bbb' %>"><%= article.dateline || '—' %></td>
+        <td>
+          <span class="status-badge status-<%= article.status %>">
+            <% if (article.status === 'published') { %>
+              Live
+            <% } else if (article.status === 'scheduled') { %>
+              &#9200; <%= article.published_at ? new Date(article.published_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '' %>
+            <% } else { %>
+              Draft
+            <% } %>
+          </span>
+        </td>
         <td><%= article.author_name || '—' %></td>
         <td><%= article.published_at ? new Date(article.published_at).toLocaleDateString('en-IN') : '—' %></td>
         <td><%= article.views_count %></td>
         <td>
-          <form method="post" action="/admin/articles/<%= article.id %>/delete" onsubmit="return confirm('Delete this article? This cannot be undone.');">
-            <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
-          </form>
+          <div class="article-actions">
+            <% if (article.status === 'published') { %>
+              <a href="/article/<%= article.slug %>" target="_blank" rel="noopener" class="btn-action btn-view">View Article</a>
+            <% } else { %>
+              <a href="/article/<%= article.slug %>" target="_blank" rel="noopener" class="btn-action btn-view-draft">View Draft</a>
+            <% } %>
+
+            <a href="/admin/articles/<%= article.id %>/edit" class="btn-action btn-edit">Edit</a>
+
+            <% if (article.status === 'published') { %>
+              <form method="post" action="/admin/articles/<%= article.id %>/status" onsubmit="return confirm('Move this article to draft?');">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="status" value="draft">
+                <button type="submit" class="btn-action btn-to-draft">Move to Draft</button>
+              </form>
+            <% } else if (article.status === 'scheduled') { %>
+              <form method="post" action="/admin/articles/<%= article.id %>/status" onsubmit="return confirm('Cancel scheduled publishing and move to draft?');">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="status" value="draft">
+                <button type="submit" class="btn-action btn-cancel-schedule">Cancel Schedule</button>
+              </form>
+            <% } else { %>
+              <form method="post" action="/admin/articles/<%= article.id %>/status" onsubmit="return confirm('Publish this article now?');">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="status" value="published">
+                <button type="submit" class="btn-action btn-publish">Publish Now</button>
+              </form>
+            <% } %>
+
+            <form method="post" action="/admin/articles/<%= article.id %>/delete" onsubmit="return confirm('Delete this article? This cannot be undone.');">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
+            </form>
+          </div>
         </td>
       </tr>
     <% }) %>
     <% if (!articles.length) { %>
-      <tr><td colspan="7">No articles found.</td></tr>
+      <tr><td colspan="8">No articles found.</td></tr>
     <% } %>
   </tbody>
 </table>

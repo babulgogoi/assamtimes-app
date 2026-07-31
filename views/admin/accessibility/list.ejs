@@ -1,0 +1,53 @@
+<div class="admin-list-header">
+  <h1>Accessibility Suggestions (<%= total %>)</h1>
+</div>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Suggestion</th>
+      <th>Date</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% suggestions.forEach(function (s) { %>
+      <tr>
+        <td><%= s.name || '—' %></td>
+        <td><%= s.email || '—' %></td>
+        <td>
+          <% if (s.message.length > 140) { %>
+            <details>
+              <summary><%= s.message.slice(0, 140) %>&hellip;</summary>
+              <p><%= s.message %></p>
+            </details>
+          <% } else { %>
+            <%= s.message %>
+          <% } %>
+        </td>
+        <td><%= new Date(s.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) %></td>
+        <td>
+          <form method="post" action="/admin/accessibility-suggestions/<%= s.id %>/delete" onsubmit="return confirm('Delete this suggestion? This cannot be undone.');">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+    <% if (!suggestions.length) { %>
+      <tr><td colspan="5">No suggestions yet.</td></tr>
+    <% } %>
+  </tbody>
+</table>
+
+<nav class="pagination">
+  <% if (page > 1) { %>
+    <a href="/admin/accessibility-suggestions?page=<%= page - 1 %>">&laquo; Prev</a>
+  <% } %>
+  <span>Page <%= page %> of <%= totalPages %></span>
+  <% if (page < totalPages) { %>
+    <a href="/admin/accessibility-suggestions?page=<%= page + 1 %>">Next &raquo;</a>
+  <% } %>
+</nav>

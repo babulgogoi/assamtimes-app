@@ -1,0 +1,53 @@
+<div class="tag-page">
+  <div class="tag-header">
+    <h1><span class="tag-icon">#</span><%= tag %></h1>
+    <p class="tag-count"><%= total %> article<%= total !== 1 ? 's' : '' %> tagged "<%= tag %>"</p>
+  </div>
+
+  <div class="tag-articles">
+    <% articles.forEach(function (article) { %>
+      <div class="tag-article-item">
+        <% if (article.featured_image) { %>
+          <a href="/article/<%= article.slug %>" class="tag-article-thumb">
+            <img src="<%= thumbUrl(article.featured_image) %>"
+                 onerror="this.onerror=null;this.src='/uploads/defaults/at-news-thumb.jpg'"
+                 width="120" height="80" loading="lazy" alt="<%= article.title %>">
+          </a>
+        <% } %>
+        <div class="tag-article-info">
+          <% if (article.category) { %>
+            <span class="tag-article-category"><%= article.category %></span>
+          <% } %>
+          <h2><a href="/article/<%= article.slug %>"><%= article.title %></a></h2>
+          <% if (article.excerpt) { %>
+            <p class="tag-article-excerpt"><%= article.excerpt %></p>
+          <% } %>
+          <span class="article-meta">
+            <%= article.author_name || 'Assam Times' %> &middot;
+            <%= article.published_at ? new Date(article.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '' %> &middot;
+            <%= (article.views_count || 0).toLocaleString() %> views
+          </span>
+        </div>
+      </div>
+    <% }) %>
+
+    <% if (!articles.length) { %>
+      <div class="no-results">
+        <p>No articles found with tag "<%= tag %>".</p>
+        <a href="/">&larr; Back to homepage</a>
+      </div>
+    <% } %>
+  </div>
+
+  <% if (totalPages > 1) { %>
+    <nav class="pagination">
+      <% if (page > 1) { %>
+        <a href="/tag/<%= encodeURIComponent(tag) %>?page=<%= page - 1 %>">&laquo; Previous</a>
+      <% } %>
+      <span>Page <%= page %> of <%= totalPages %></span>
+      <% if (page < totalPages) { %>
+        <a href="/tag/<%= encodeURIComponent(tag) %>?page=<%= page + 1 %>">Next &raquo;</a>
+      <% } %>
+    </nav>
+  <% } %>
+</div>

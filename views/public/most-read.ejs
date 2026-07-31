@@ -1,0 +1,46 @@
+<div class="home-layout">
+  <div class="home-main">
+    <h1 class="page-title">Most Read</h1>
+
+    <% if (!articles.length) { %>
+      <p>No articles found.</p>
+    <% } else { %>
+      <div class="article-grid">
+        <% articles.forEach(function (article, articleIndex) { %>
+          <article class="story-card story-card--medium">
+            <a class="story-card__link" href="/article/<%= article.slug %>">
+              <div class="story-card__media">
+                <img class="story-card__image" src="<%= thumbUrl(article.featured_image) %>" alt="<%= article.title %>"<%- articleIndex === 0 ? ' loading="eager"' : ' loading="lazy"' %>>
+                <% if (article.category) { %>
+                  <span class="story-card__tag"><%= article.category %></span>
+                <% } %>
+              </div>
+              <h2 class="story-card__title"><%= article.title %></h2>
+            </a>
+            <p class="story-card__meta">
+              <% if (article.author_username) { %>
+                <a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a> &middot;
+              <% } %>
+              <%= article.published_at ? new Date(article.published_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '' %>
+              &middot; <%= article.views_count %> views
+            </p>
+          </article>
+        <% }) %>
+      </div>
+
+      <nav class="pagination">
+        <% if (page > 1) { %>
+          <a href="/most-read?page=<%= page - 1 %>">&laquo; Prev</a>
+        <% } %>
+        <span>Page <%= page %> of <%= totalPages %></span>
+        <% if (page < totalPages) { %>
+          <a href="/most-read?page=<%= page + 1 %>">Next &raquo;</a>
+        <% } %>
+      </nav>
+    <% } %>
+  </div>
+
+  <aside class="home-sidebar divider-v">
+    <%- include('../partials/sidebar-most-read') %>
+  </aside>
+</div>

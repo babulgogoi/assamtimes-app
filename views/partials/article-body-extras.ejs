@@ -1,0 +1,163 @@
+<%# Shared between article.ejs's Design A and Design B — this is real
+    per-article CONTENT (gallery/audio/pdf/video/live blog/tags), not layout
+    chrome, so both designs render it identically rather than one silently
+    dropping it. Extracted here so a future change to any of these doesn't
+    need to be kept in sync across two copies. %>
+
+<%- include('./ads-in-article') %>
+
+<% if (article.gallery_images && article.gallery_images.length) { %>
+  <%# Normalise each item — old rows may be plain strings (bare filename
+      or full path) or {url,caption}; new rows are {url,alt,caption}. %>
+  <%
+    function galUrl(s) {
+      if (!s) return '';
+      return (/^https?:\/\//.test(s) || s.charAt(0) === '/') ? s : '/uploads/articles/' + s;
+    }
+    function galImg(it) {
+      if (typeof it === 'string') return { url: galUrl(it), alt: '', caption: '' };
+      return { url: galUrl(it.url || it.filename || ''), alt: it.alt || '', caption: it.caption || '' };
+    }
+    var galleryItems = article.gallery_images.map(galImg).filter(function (g) { return g.url; });
+  %>
+  <% if (galleryItems.length === 1) { %>
+    <%# Single gallery image → plain inline article image, no lightbox. %>
+    <% var soloImg = galleryItems[0]; %>
+    <figure class="article-featured">
+      <img class="article-detail__image" src="<%= articleImageUrl(soloImg.url) %>" alt="<%= soloImg.alt || soloImg.caption || article.title %>">
+      <% if (soloImg.caption) { %>
+        <figcaption><%= soloImg.caption %></figcaption>
+      <% } %>
+    </figure>
+  <% } else if (galleryItems.length > 1) { %>
+    <div class="article-gallery article-gallery--masonry">
+      <% galleryItems.forEach(function (galleryImg, idx) { %>
+        <img class="gallery-lightbox-trigger" src="<%= galleryImg.url %>" alt="<%= galleryImg.alt || galleryImg.caption || article.title %>" data-index="<%= idx %>">
+      <% }) %>
+    </div>
+
+    <script type="application/json" id="galleryData"><%- JSON.stringify(galleryItems).replace(/</g, '\\u003c') %></script>
+
+    <div class="gallery-lightbox" id="galleryLightbox" hidden>
+      <button class="gallery-lightbox__close" id="galleryLightboxClose" type="button" aria-label="Close">&times;</button>
+      <button class="gallery-lightbox__nav gallery-lightbox__nav--prev" id="galleryLightboxPrev" type="button" aria-label="Previous">&#8249;</button>
+      <figure class="gallery-lightbox__figure">
+        <img class="gallery-lightbox__image" id="galleryLightboxImage" src="" alt="">
+        <figcaption class="gallery-lightbox__caption" id="galleryLightboxCaption"></figcaption>
+      </figure>
+      <button class="gallery-lightbox__nav gallery-lightbox__nav--next" id="galleryLightboxNext" type="button" aria-label="Next">&#8250;</button>
+    </div>
+  <% } %>
+<% } %>
+
+<% if (article.audio_file) { %>
+  <audio class="article-detail__audio" controls src="<%= article.audio_file %>"></audio>
+<% } %>
+
+<% if (article.pdf_file) { %>
+  <p><a href="<%= article.pdf_file %>" target="_blank" rel="noopener">Download PDF</a></p>
+<% } %>
+
+<%
+  var videoUrl = article.video_url;
+  var youtubeId = null;
+  var isYoutubeShort = false;
+  if (videoUrl && (videoUrl.indexOf('youtube.com') !== -1 || videoUrl.indexOf('youtu.be') !== -1)) {
+    var ytMatch = videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) {
+      youtubeId = ytMatch[1];
+      isYoutubeShort = videoUrl.indexOf('/shorts/') !== -1;
+    }
+  }
+  var xUser = null, xId = null;
+  if (videoUrl) {
+    var xMatch = videoUrl.match(/(?:x\.com|twitter\.com)\/([^/]+)\/status\/(\d+)/);
+    if (xMatch) { xUser = xMatch[1]; xId = xMatch[2]; }
+  }
+%>
+<% if (videoUrl) { %>
+<div class="article-video-wrap">
+  <% if (videoUrl.indexOf('facebook.com') !== -1) { %>
+    <div class="fb-video-wrapper" style="position:relative; width:100%; max-width:560px; margin:0 auto;">
+      <iframe
+        class="fb-video-iframe"
+        data-fb-url="<%= videoUrl %>"
+        src=""
+        style="border:none; overflow:hidden; width:100%; aspect-ratio:560/430; display:block;"
+        scrolling="no"
+        frameborder="0"
+        allowfullscreen="true"
+        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share">
+      </iframe>
+    </div>
+  <% } else if (youtubeId) { %>
+    <% /* Shorts are vertical (9:16) — a 16:9 box would pillarbox them
+          with black bars either side, so use a narrower, taller
+          container instead. Same embed URL works for both, YouTube's
+          player adapts; only the wrapper's own shape needs to differ. */ %>
+    <div style="position:relative; width:100%; <%= isYoutubeShort ? 'max-width:315px; aspect-ratio:9/16;' : 'max-width:560px; aspect-ratio:16/9;' %> margin:0 auto;">
+      <iframe
+        src="https://www.youtube.com/embed/<%= youtubeId %>"
+        style="width:100%; height:100%; border:none;"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen>
+      </iframe>
+    </div>
+  <% } else if (xId) { %>
+    <%/* X doesn't allow direct iframe embedding of videos — blockquote +
+         widgets.js (X's own official embed snippet) is the only reliable
+         route without paid API access. */%>
+    <blockquote class="twitter-tweet" data-media-max-width="560">
+      <a href="https://x.com/<%= xUser %>/status/<%= xId %>"></a>
+    </blockquote>
+    <script async src="https://platform.x.com/widgets.js" charset="utf-8"></script>
+  <% } else { %>
+    <p><a href="<%= videoUrl %>" target="_blank" rel="noopener">Watch video</a></p>
+  <% } %>
+</div>
+<% } %>
+
+<% if (article.is_liveblog) { %>
+  <div class="liveblog-section" id="liveblogSection" data-article-id="<%= article.id %>" data-status="<%= article.liveblog_status %>">
+    <div class="liveblog-header">
+      <% if (article.liveblog_status === 'live') { %>
+        <div class="liveblog-live-badge"><span class="live-dot"></span> LIVE</div>
+        <span class="liveblog-updating">Updates every 30 seconds</span>
+      <% } else { %>
+        <div class="liveblog-ended-badge">Coverage Ended</div>
+      <% } %>
+      <span class="liveblog-count" id="liveEntryCount"><%= liveblogEntries ? liveblogEntries.length : 0 %> updates</span>
+    </div>
+
+    <div class="liveblog-entries" id="liveblogEntries">
+      <% if (liveblogEntries && liveblogEntries.length) { %>
+        <% liveblogEntries.forEach(function (entry) { %>
+          <div class="liveblog-entry<%= entry.is_pinned ? ' is-pinned' : '' %><%= entry.is_key_event ? ' is-key-event' : '' %>" data-entry-id="<%= entry.id %>">
+            <% if (entry.is_pinned) { %><div class="entry-pin-label">&#128204; Pinned</div><% } %>
+            <div class="entry-header">
+              <% if (entry.is_key_event) { %><span class="key-event-badge">&#11088; Key Event</span><% } %>
+              <time class="entry-time" datetime="<%= entry.created_at.toISOString() %>">
+                <%= new Date(entry.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) %>
+                <span class="entry-date"><%= new Date(entry.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) %></span>
+              </time>
+              <% if (entry.author_name) { %><span class="entry-author">by <%= entry.author_name %></span><% } %>
+            </div>
+            <div class="entry-content"><%- entry.content_html %></div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="liveblog-empty"><p>No updates yet. Check back soon.</p></div>
+      <% } %>
+    </div>
+  </div>
+<% } %>
+
+<% if (article.tags && article.tags.length) { %>
+  <div class="article-tags">
+    <span class="article-tags__label">Tags:</span>
+    <% article.tags.forEach(function (tag) { %>
+      <a href="/tag/<%= encodeURIComponent(tag) %>" class="article-tag"><%= tag %></a>
+    <% }) %>
+  </div>
+<% } %>

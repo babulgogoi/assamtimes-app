@@ -1,0 +1,90 @@
+<div class="admin-list-header">
+  <h1>Comments</h1>
+</div>
+
+<nav class="admin-tabs">
+  <a class="admin-tabs__link <%= status === 'pending' ? 'is-active' : '' %>" href="/admin/comments?status=pending">Pending</a>
+  <a class="admin-tabs__link <%= status === 'approved' ? 'is-active' : '' %>" href="/admin/comments?status=approved">Approved</a>
+  <a class="admin-tabs__link <%= status === 'spam' ? 'is-active' : '' %>" href="/admin/comments?status=spam">Spam</a>
+  <a class="admin-tabs__link <%= status === 'all' ? 'is-active' : '' %>" href="/admin/comments?status=all">All</a>
+</nav>
+
+<% if (status === 'pending' && comments.length) { %>
+  <form method="post" action="/admin/comments/bulk-approve" class="admin-list-header" onsubmit="return confirm('Approve ALL pending comments? This is not limited to this page.');">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <span></span>
+    <button type="submit" class="admin-btn admin-btn--primary">Approve All Pending</button>
+  </form>
+<% } %>
+
+<table class="admin-table">
+  <thead>
+    <tr>
+      <th>Article</th>
+      <th>Author</th>
+      <th>Email</th>
+      <th>Date</th>
+      <th>Comment</th>
+      <th>Status</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% comments.forEach(function (c) { %>
+      <tr>
+        <td>
+          <% if (c.article_slug) { %>
+            <a href="/article/<%= c.article_slug %>" target="_blank" rel="noopener"><%= c.article_title %></a>
+          <% } else { %>
+            <em>Article deleted</em>
+          <% } %>
+        </td>
+        <td><%= c.author_name %></td>
+        <td><%= c.author_email || '—' %></td>
+        <td><%= new Date(c.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) %></td>
+        <td class="admin-comment-cell">
+          <% if (c.body.length > 140) { %>
+            <details>
+              <summary><%= c.body.slice(0, 140) %>&hellip;</summary>
+              <p><%= c.body %></p>
+            </details>
+          <% } else { %>
+            <%= c.body %>
+          <% } %>
+        </td>
+        <td><span class="admin-badge admin-badge--<%= c.status %>"><%= c.status %></span></td>
+        <td class="admin-comment-actions">
+          <% if (c.status !== 'approved') { %>
+            <form method="post" action="/admin/comments/<%= c.id %>/approve">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="admin-btn">Approve</button>
+            </form>
+          <% } %>
+          <% if (c.status !== 'spam') { %>
+            <form method="post" action="/admin/comments/<%= c.id %>/spam">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="admin-btn">Spam</button>
+            </form>
+          <% } %>
+          <form method="post" action="/admin/comments/<%= c.id %>/delete" onsubmit="return confirm('Delete this comment? This cannot be undone.');">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+    <% if (!comments.length) { %>
+      <tr><td colspan="7">No comments found.</td></tr>
+    <% } %>
+  </tbody>
+</table>
+
+<nav class="pagination">
+  <% if (page > 1) { %>
+    <a href="/admin/comments?status=<%= encodeURIComponent(status) %>&page=<%= page - 1 %>">&laquo; Prev</a>
+  <% } %>
+  <span>Page <%= page %> of <%= totalPages %></span>
+  <% if (page < totalPages) { %>
+    <a href="/admin/comments?status=<%= encodeURIComponent(status) %>&page=<%= page + 1 %>">Next &raquo;</a>
+  <% } %>
+</nav>

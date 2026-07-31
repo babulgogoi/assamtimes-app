@@ -1,46 +1,198 @@
-<div class="home-layout">
-  <div class="home-main">
+<div class="home-stack">
 
-    <% if (lead) { %>
-      <article class="lead-story">
-        <a class="lead-story__link" href="/article/<%= lead.slug %>">
-          <img class="lead-story__image" src="<%= lead.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= lead.title %>">
-          <div class="lead-story__overlay">
-            <h1 class="lead-story__title"><%= lead.title %></h1>
-            <p class="lead-story__date">
-              <%= lead.published_at ? new Date(lead.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '' %>
-            </p>
-          </div>
-        </a>
-      </article>
-    <% } %>
-
-    <div class="article-grid">
-      <% grid.forEach(function (article) { %>
-        <article class="article-card">
-          <a href="/article/<%= article.slug %>">
-            <img class="article-card__image" src="<%= article.featured_image || '/uploads/defaults/at-news.png' %>" alt="<%= article.title %>">
-            <h2 class="article-card__title"><%= article.title %></h2>
+  <% if (sectionDesigns.hero === 'B') { %>
+    <section class="hero-section" aria-label="Top Stories">
+      <div class="hero-main">
+        <% var lead = heroArticles[0]; %>
+        <% if (lead) { %>
+          <a href="/article/<%= lead.slug %>" class="hero-lead">
+            <div class="hero-lead-text">
+              <h2><%= lead.title %></h2>
+              <p class="hero-deck"><%= lead.excerpt || lead.subheadline || '' %></p>
+            </div>
+            <img src="<%= articleImageUrl(lead.featured_image) %>" alt="<%= lead.featured_image_alt || lead.title %>" width="400" height="280" loading="eager" fetchpriority="high">
           </a>
-          <p class="article-meta">
-            <% if (article.author_username) { %>
-              by <a href="/author/<%= encodeURIComponent(article.author_username) %>"><%= article.author_name %></a>
-            <% } %>
-            <% if (article.category) { %>
-              in <a href="/category/<%= encodeURIComponent(article.category) %>"><%= article.category %></a>
-            <% } %>
-          </p>
+
+          <hr class="hero-rule">
+        <% } %>
+
+        <div class="hero-grid">
+          <% heroArticles.slice(1, 5).forEach(function (a) { %>
+            <a href="/article/<%= a.slug %>" class="hero-grid-item">
+              <div class="hero-grid-text">
+                <h4><%= a.title %></h4>
+              </div>
+              <img src="<%= thumbUrl(a.featured_image) %>" alt="" width="139" height="130" loading="lazy">
+            </a>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="hero-sidebar">
+        <% heroSidebar.forEach(function (a) { %>
+          <a href="/article/<%= a.slug %>" class="hero-sidebar-item">
+            <h5><%= a.title %></h5>
+            <span><%= a.published_at ? new Date(a.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '' %></span>
+          </a>
+        <% }) %>
+      </div>
+    </section>
+  <% } else if (sectionDesigns.latestNews === 'B') { %>
+    <section class="category-section divider-h" aria-label="Latest News">
+      <div class="ln-tabs" role="tablist">
+        <% sectionDesigns.latestnewsTabs.forEach(function (tab) { %>
+          <button type="button" class="ln-tab" role="tab" data-category="<%= tab %>" aria-selected="<%= tab === 'All' ? 'true' : 'false' %>"><%= tab %></button>
+        <% }) %>
+      </div>
+
+      <%# Server-rendered for SEO/first paint — always unfiltered (no
+          category param) on initial load, per spec; the tabs JS below swaps
+          this grid's content via /api/latest-news on click, no reload. %>
+      <div class="ln-grid" id="ln-grid">
+        <% latestNews.slice(0, 8).forEach(function (a) { %>
+          <a href="/article/<%= a.slug %>" class="ln-cell">
+            <img src="<%= thumbUrl(a.featured_image) %>" alt="<%= a.title %>" loading="lazy" width="230" height="172">
+            <h4><%= a.title %></h4>
+            <p>
+              <%= a.published_at ? new Date(a.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '' %>
+              <% if (a.author_name) { %>&bull; <%= a.author_name %><% } %>
+            </p>
+          </a>
+        <% }) %>
+      </div>
+    </section>
+    <script src="/js/<%= process.env.NODE_ENV === 'production' ? 'latest-news-tabs.min.js' : 'latest-news-tabs.js' %>" defer></script>
+  <% } else { %>
+    <%- include('../partials/category-section', { categoryName: 'Latest News', showHeader: false, articles: latestNews, eagerHero: true }) %>
+  <% } %>
+
+  <% if (sectionDesigns.features === 'B') { %>
+    <section class="category-section divider-h" aria-label="Features">
+      <a class="category-section__title" href="/category/Features">Features</a>
+
+      <div class="features-section">
+        <div class="features-main">
+          <%# Same structure as Hero Design B's lead+grid — reuses
+              .hero-lead/.hero-rule/.hero-grid/.hero-grid-item as-is rather
+              than duplicating that CSS under a features- prefix, since the
+              layout is structurally identical; only the sidebar column
+              (below) differs visually. %>
+          <% var ftLead = featuredArticles[0]; %>
+          <% if (ftLead) { %>
+            <a href="/article/<%= ftLead.slug %>" class="hero-lead">
+              <div class="hero-lead-text">
+                <h2><%= ftLead.title %></h2>
+                <p class="hero-deck"><%= ftLead.excerpt || ftLead.subheadline || '' %></p>
+              </div>
+              <img src="<%= articleImageUrl(ftLead.featured_image) %>" alt="<%= ftLead.featured_image_alt || ftLead.title %>" width="400" height="280" loading="lazy">
+            </a>
+
+            <hr class="hero-rule">
+          <% } %>
+
+          <div class="hero-grid">
+            <% featuredArticles.slice(1, 5).forEach(function (a) { %>
+              <a href="/article/<%= a.slug %>" class="hero-grid-item">
+                <div class="hero-grid-text">
+                  <h4><%= a.title %></h4>
+                </div>
+                <img src="<%= thumbUrl(a.featured_image) %>" alt="" width="139" height="130" loading="lazy">
+              </a>
+            <% }) %>
+          </div>
+        </div>
+
+        <div class="features-sidebar">
+          <% featuresSidebar.forEach(function (a) { %>
+            <a href="/article/<%= a.slug %>" class="features-sidebar-item">
+              <% if (a.featured_image) { %>
+                <img src="<%= thumbUrl(a.featured_image) %>" alt="" width="130" height="130" loading="lazy">
+              <% } %>
+              <div class="features-sidebar-text">
+                <h5><%= a.title %></h5>
+                <span><%= a.published_at ? new Date(a.published_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '' %></span>
+              </div>
+            </a>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+  <% } else { %>
+    <%- include('../partials/category-section', { categoryName: 'Features', showHeader: true, articles: featuredArticles, eagerHero: false }) %>
+  <% } %>
+
+  <% if (sectionDesigns.homepageEmbedEnabled && sectionDesigns.homepageEmbedHtml) { %>
+    <div class="homepage-embed-section">
+      <hr class="embed-rule-top">
+      <div class="homepage-embed-content">
+        <%- sectionDesigns.homepageEmbedHtml %>
+      </div>
+      <hr class="embed-rule-bottom">
+    </div>
+  <% } %>
+
+  <% if (editorsPicks.length) { %>
+    <section class="category-section divider-h" aria-label="Editor's Picks">
+      <h2 class="category-section__title">Editor's Picks</h2>
+
+      <div class="editors-picks__row1">
+        <% var pickFeatured = editorsPicks[0]; %>
+        <article class="story-card story-card--split">
+          <a class="story-card__link" href="/article/<%= pickFeatured.slug %>">
+            <div class="story-card__media">
+              <picture>
+                <source media="(max-width: 600px)" srcset="<%= mobileHeroUrl(pickFeatured.featured_image) %>" width="520" height="350">
+                <img class="story-card__image" src="<%= largeUrl(pickFeatured.featured_image) %>" width="460" height="335" alt="<%= pickFeatured.title %>" loading="lazy">
+              </picture>
+            </div>
+            <div class="story-card__textblock">
+              <h2 class="story-card__title"><%= pickFeatured.title %></h2>
+              <p class="story-card__meta">
+                <%= pickFeatured.published_at ? new Date(pickFeatured.published_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : '' %>
+                &middot; <%= pickFeatured.views_count %> views
+              </p>
+            </div>
+          </a>
         </article>
-      <% }) %>
-    </div>
 
-    <div class="view-all-news">
-      <a class="view-all-news__btn" href="/news">View All News</a>
-    </div>
+        <% if (editorsPicks[1]) { %>
+          <article class="story-card story-card--medium">
+            <a class="story-card__link" href="/article/<%= editorsPicks[1].slug %>">
+              <div class="story-card__media">
+                <picture>
+                  <source media="(max-width: 600px)" srcset="<%= mobileThumbUrl(editorsPicks[1].featured_image) %>" width="515" height="200">
+                  <img class="story-card__image" src="<%= thumbUrl(editorsPicks[1].featured_image) %>" width="230" height="120" alt="<%= editorsPicks[1].title %>" loading="lazy">
+                </picture>
+              </div>
+              <h3 class="story-card__title"><%= editorsPicks[1].title %></h3>
+            </a>
+          </article>
+        <% } %>
+      </div>
 
-  </div>
+      <% var pickRow2 = editorsPicks.slice(2, 6); %>
+      <% if (pickRow2.length) { %>
+        <div class="category-section__row category-section__row--grid">
+          <% pickRow2.forEach(function (article) { %>
+            <article class="story-card story-card--small">
+              <a class="story-card__link" href="/article/<%= article.slug %>">
+                <div class="story-card__media">
+                  <picture>
+                    <source media="(max-width: 600px)" srcset="<%= mobileThumbUrl(article.featured_image) %>" width="515" height="200">
+                    <img class="story-card__image" src="<%= thumbUrl(article.featured_image) %>" width="230" height="120" alt="<%= article.title %>" loading="lazy">
+                  </picture>
+                </div>
+                <h3 class="story-card__title"><%= article.title %></h3>
+              </a>
+            </article>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+  <% } %>
 
-  <aside class="home-sidebar">
-    <%- include('../partials/sidebar-home') %>
-  </aside>
+  <p class="home-stack__most-read-link">
+    <a href="/most-read">Most Read &rarr;</a>
+  </p>
+
 </div>

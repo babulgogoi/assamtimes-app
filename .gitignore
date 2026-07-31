@@ -1,7 +1,10 @@
 node_modules/
+chrome/
 .env
 *.log
 npm-debug.log*
 .DS_Store
 .claude/settings.local.json
 logs/
+public/encoding-issues.html
+.claude-session-log

@@ -3,30 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <% if (process.env.NODE_ENV === 'production') { %>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W3VCJYPSX0"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-W3VCJYPSX0');
-    </script>
-  <% } %>
+  <!-- No Google Analytics here, deliberately — admin pages never get
+       tracked. This layout is entirely separate from views/layout.ejs
+       (the public one), so excluding /admin/* just means not putting the
+       gtag snippet in this file, no isAdmin flag/check needed at all. -->
   <title><%= typeof title !== 'undefined' ? title : 'Admin' %></title>
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/style.min.css">
+  <link rel="stylesheet" href="/css/admin.min.css">
 </head>
 <body class="admin-body">
   <header class="admin-header">
     <span class="admin-header__brand">Assam Times Admin</span>
     <nav class="admin-header__nav">
-      <a href="/admin/articles">Articles</a>
-      <a href="/admin/pages">Pages</a>
+      <div class="admin-nav-item">
+        <a href="/admin/articles" class="admin-nav-trigger">Articles <span class="admin-nav-chevron">&#9662;</span></a>
+        <ul class="admin-nav-dropdown">
+          <li><a href="/admin/articles">List Articles</a></li>
+          <li><a href="/admin/articles/new">+ New Article</a></li>
+          <li><a href="/admin/articles?status=scheduled">Scheduled</a></li>
+        </ul>
+      </div>
+      <div class="admin-nav-item">
+        <a href="/admin/pages" class="admin-nav-trigger">Pages <span class="admin-nav-chevron">&#9662;</span></a>
+        <ul class="admin-nav-dropdown">
+          <li><a href="/admin/pages">List Pages</a></li>
+          <li><a href="/admin/pages/new">+ New Page</a></li>
+        </ul>
+      </div>
+      <a href="/admin/comments">Comments<% if (typeof pendingCommentsCount !== 'undefined' && pendingCommentsCount > 0) { %> <span class="admin-nav-badge"><%= pendingCommentsCount %></span><% } %></a>
+      <a href="/admin/newsletter">Newsletter</a>
+      <a href="/admin/push">Push</a>
+      <a href="/admin/accessibility-suggestions">Accessibility</a>
       <a href="/admin/menu">Menu</a>
       <a href="/admin/settings">Settings</a>
-      <a href="/admin/authors">Authors</a>
+      <div class="admin-nav-item">
+        <a href="/admin/authors" class="admin-nav-trigger">Authors <span class="admin-nav-chevron">&#9662;</span></a>
+        <ul class="admin-nav-dropdown">
+          <li><a href="/admin/authors">List Authors</a></li>
+          <li><a href="/admin/authors/new">+ New Author</a></li>
+        </ul>
+      </div>
       <form method="post" action="/admin/logout" class="admin-header__logout">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button type="submit">Logout<% if (typeof authorName !== 'undefined' && authorName) { %> (<%= authorName %>)<% } %></button>
       </form>
     </nav>

@@ -25,7 +25,7 @@ async function getAllForAdmin() {
 
 async function getAllPublished() {
   const { rows } = await pool.query(
-    `SELECT id, slug, title FROM pages WHERE status = 'published' ORDER BY title ASC`
+    `SELECT id, slug, title, updated_at FROM pages WHERE status = 'published' ORDER BY title ASC`
   );
   return rows;
 }
