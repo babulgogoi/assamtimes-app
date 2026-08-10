@@ -42,8 +42,10 @@ function calculateReadingTime(body) {
 // Homepage redesign: hardcoded section order, each with its own size. Every
 // section still queries its own latest articles live on every request —
 // only the list of categories/order/sizing is fixed, not the content.
-// `category: null` means "latest published overall, no category filter"
-// (used for Latest News, which is inherently the newest items site-wide).
+// `category: null` means "latest published overall, no category filter,
+// except Features" (used for Latest News — Features is opinion/analysis,
+// not news, and gets its own section below, so it's explicitly excluded
+// via getLatestPublished's excludeCategory rather than left to overlap).
 // `showHeader: false` suppresses the section's title bar/link — used for
 // Latest News since it's the first section and the label is redundant.
 const HOME_SECTIONS = [
@@ -54,6 +56,11 @@ const EDITORS_PICKS_SIZE = 6;
 const MOST_READ_PAGE_SIZE = 24;
 
 const HERO_POOL_SIZE = 10; // 5 for the lead+grid, 5 for the sidebar — one query, no duplicates.
+// Hero is the site's News section (Design B replaces Latest News' own
+// hero+grid slot, see the `home()` render branch note in home.ejs), so it
+// excludes Features the same way HOME_SECTIONS' Latest News entry does —
+// fixed 2026-08-04, previously pulled from every category unfiltered and
+// could show Features (opinion/analysis) pieces mixed into the news hero.
 const FEATURES_SIDEBAR_SIZE = 5;
 
 async function home(req, res, next) {
@@ -63,13 +70,13 @@ async function home(req, res, next) {
         HOME_SECTIONS.map(({ category, label, limit, showHeader }) => {
           const fetch = category
             ? articlesModel.getByCategory({ category, limit })
-            : articlesModel.getLatestPublished({ limit });
+            : articlesModel.getLatestPublished({ limit, excludeCategory: 'Features' });
           return fetch.then((articles) => ({ label, articles, showHeader }));
         })
       ),
       articlesModel.getEditorsPicks({ limit: EDITORS_PICKS_SIZE }),
       siteSettingsModel.getSectionDesigns(),
-      articlesModel.getLatestPublished({ limit: HERO_POOL_SIZE }),
+      articlesModel.getLatestPublished({ limit: HERO_POOL_SIZE, excludeCategory: 'Features' }),
       // Features Design B's sidebar column — offset past the 9-article pool
       // HOME_SECTIONS already fetches for featuredArticles (Design B's own
       // main column only ever uses the first 5 of those), so this is
@@ -125,7 +132,7 @@ async function latestNewsApi(req, res, next) {
     const limit = 8;
 
     const articles = !category || category === 'All'
-      ? await articlesModel.getLatestPublished({ limit })
+      ? await articlesModel.getLatestPublished({ limit, excludeCategory: 'Features' })
       : await articlesModel.getByCategory({ category, limit });
 
     res.set('Cache-Control', 'public, max-age=60');

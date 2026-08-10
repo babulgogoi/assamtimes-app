@@ -10,15 +10,16 @@ const ARTICLE_CARD_FIELDS = `
   au.id AS author_id, au.display_name AS author_name, au.username AS author_username
 `;
 
-async function getLatestPublished({ limit, offset = 0 }) {
+async function getLatestPublished({ limit, offset = 0, excludeCategory = null }) {
   const { rows } = await pool.query(
     `SELECT ${ARTICLE_CARD_FIELDS}
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id
      WHERE a.status = 'published' AND a.is_advertisement = false
+       AND ($3::text IS NULL OR a.category IS DISTINCT FROM $3)
      ORDER BY a.published_at DESC
      LIMIT $1 OFFSET $2`,
-    [limit, offset]
+    [limit, offset, excludeCategory]
   );
   return rows;
 }
