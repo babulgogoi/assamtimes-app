@@ -50,6 +50,7 @@
           logo: { '@type': 'ImageObject', url: process.env.SITE_URL + '/uploads/branding/logo.jpg' },
         },
         url: canonicalUrl,
+        mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
       };
     %>
     <meta name="description" content="<%= ogDescription %>">
@@ -92,16 +93,57 @@
       </script>
     <% } %>
     <link rel="stylesheet" href="/css/article.min.css">
-  <% } else if (typeof metaDescription !== 'undefined' && metaDescription) { %>
-    <meta name="description" content="<%= metaDescription %>">
+  <% } else { %>
+    <% if (typeof metaDescription !== 'undefined' && metaDescription) { %>
+      <meta name="description" content="<%= metaDescription %>">
+    <% } %>
+    <%
+      // Non-article pages (homepage, category, author, tag, search, etc.)
+      // never got OG/Twitter tags at all before — this was scoped entirely
+      // to the article-only `if` block above. Fallback values here, not
+      // duplicated content: og:title uses the real page `title` local,
+      // og:image falls back to the new favicon-512 (no site-wide "default
+      // share image" exists yet — same asset the Organization schema below
+      // uses as its logo).
+      var pageOgDescription = typeof metaDescription !== 'undefined' && metaDescription ? metaDescription : "Assam Times — Assam's community-powered online newspaper.";
+      var pageOgTitle = typeof title !== 'undefined' ? title : 'Assam Times';
+      var pageOgImage = process.env.SITE_URL + '/uploads/branding/favicon-512.png';
+      var pageOgUrl = typeof canonicalUrl !== 'undefined' && canonicalUrl ? canonicalUrl : process.env.SITE_URL;
+    %>
+    <meta property="og:site_name" content="Assam Times">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<%= pageOgUrl %>">
+    <meta property="og:title" content="<%= pageOgTitle %>">
+    <meta property="og:description" content="<%= pageOgDescription %>">
+    <meta property="og:image" content="<%= pageOgImage %>">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<%= pageOgTitle %>">
+    <meta name="twitter:description" content="<%= pageOgDescription %>">
+    <meta name="twitter:image" content="<%= pageOgImage %>">
+    <meta name="twitter:site" content="@assamtimes_">
   <% } %>
   <% if (typeof canonicalUrl !== 'undefined' && canonicalUrl) { %>
     <link rel="canonical" href="<%= canonicalUrl %>">
   <% } %>
+  <meta name="robots" content="index, follow">
+  <script type="application/ld+json"><%- JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Assam Times',
+    url: process.env.SITE_URL + '/',
+  }).replace(/</g, '\\u003c') %></script>
+  <script type="application/ld+json"><%- JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Assam Times',
+    url: process.env.SITE_URL + '/',
+    logo: process.env.SITE_URL + '/uploads/branding/favicon-512.png',
+  }).replace(/</g, '\\u003c') %></script>
   <link rel="alternate" type="application/rss+xml" title="Assam Times RSS Feed" href="<%= process.env.SITE_URL %>/feed">
-  <link rel="icon" type="image/x-icon" href="/uploads/branding/favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="/uploads/branding/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/uploads/branding/favicon-16x16.png">
+  <link rel="icon" href="/uploads/branding/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/uploads/branding/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/uploads/branding/favicon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/uploads/branding/favicon-512.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/uploads/branding/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#FF6600">
