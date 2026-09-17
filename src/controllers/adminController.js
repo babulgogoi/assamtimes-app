@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const authorsModel = require('../models/authors');
 const articlesModel = require('../models/articles');
 const articleAuthorsModel = require('../models/articleAuthors');
+const articleRevisionsModel = require('../models/articleRevisions');
 const slugify = require('../utils/slugify');
 const { urlFor, deleteUploadedFile, uploadErrorMessages, compressImageFile, generateFeaturedImageVariants } = require('../middleware/upload');
 const { thumbUrl } = require('../utils/imageVariants');
@@ -27,13 +28,6 @@ function cleanupReplacedFiles(oldArticle, newData) {
   (oldArticle.gallery_images || [])
     .filter((img) => !newGalleryUrls.includes(img.url))
     .forEach((img) => deleteUploadedFile(img.url));
-}
-
-function cleanupAllFiles(article) {
-  if (article.featured_image) deleteUploadedFile(article.featured_image);
-  if (article.audio_file) deleteUploadedFile(article.audio_file);
-  if (article.pdf_file) deleteUploadedFile(article.pdf_file);
-  (article.gallery_images || []).forEach((img) => deleteUploadedFile(img.url));
 }
 
 function loginForm(req, res) {
@@ -400,6 +394,14 @@ async function createArticle(req, res, next) {
     const data = await buildArticleData(req);
     const id = await articlesModel.create(data);
 
+    await articleRevisionsModel.recordRevision({
+      articleId: id,
+      action: 'create',
+      changedBy: req.session.authorId,
+      changes: articleRevisionsModel.diffStates({}, articleRevisionsModel.pickTrackedFields(data)),
+      reason: null,
+    });
+
     const coauthors = parseCoauthorsFromBody(req.body);
     await articleAuthorsModel.replaceForArticle(
       id,
@@ -458,9 +460,21 @@ async function updateArticle(req, res, next) {
       });
     }
 
+    const oldTracked = articleRevisionsModel.pickTrackedFields(article);
     const data = await buildArticleData(req, article);
     await articlesModel.update(article.id, data);
     cleanupReplacedFiles(article, data);
+
+    const revisionChanges = articleRevisionsModel.diffStates(oldTracked, articleRevisionsModel.pickTrackedFields(data));
+    if (Object.keys(revisionChanges).length > 0) {
+      await articleRevisionsModel.recordRevision({
+        articleId: article.id,
+        action: 'update',
+        changedBy: req.session.authorId,
+        changes: revisionChanges,
+        reason: (req.body.revision_reason || '').trim() || null,
+      });
+    }
 
     const coauthors = parseCoauthorsFromBody(req.body);
     await articleAuthorsModel.replaceForArticle(
@@ -517,10 +531,32 @@ async function updateArticle(req, res, next) {
 
 async function deleteArticle(req, res, next) {
   try {
+    const reason = (req.body.reason || '').trim();
+    if (!reason) {
+      return res.status(400).send('A reason is required to delete an article.');
+    }
+
     const article = await articlesModel.getById(req.params.id);
-    await articlesModel.remove(req.params.id);
-    if (article) cleanupAllFiles(article);
-    if (article && article.status === 'published') {
+    if (!article) {
+      return res.status(404).send('Article not found');
+    }
+
+    // Soft-delete: hides the article from every public query and the
+    // default admin list, but keeps the row + uploaded files + its full
+    // article_revisions history intact — restorable the same way as any
+    // other revision (see articleRevisionsModel.reconstructState). Files
+    // are deliberately NOT cleaned up here anymore (unlike the old hard
+    // DELETE this replaced) since a restore needs them to still exist.
+    await articlesModel.softDelete(article.id);
+    await articleRevisionsModel.recordRevision({
+      articleId: article.id,
+      action: 'delete',
+      changedBy: req.session.authorId,
+      changes: articleRevisionsModel.diffStates({ deleted_at: null }, { deleted_at: new Date() }),
+      reason,
+    });
+
+    if (article.status === 'published') {
       homepageCache.flush();
       categoryPageCache.flush();
       purgeArticle(article).catch(e => console.error('[CF Purge] delete error:', e));
@@ -549,6 +585,20 @@ async function updateArticleStatus(req, res, next) {
     }
 
     const updated = await articlesModel.updateStatus(article.id, req.body.status);
+
+    const statusChanges = articleRevisionsModel.diffStates(
+      articleRevisionsModel.pickTrackedFields(article),
+      articleRevisionsModel.pickTrackedFields(updated)
+    );
+    if (Object.keys(statusChanges).length > 0) {
+      await articleRevisionsModel.recordRevision({
+        articleId: article.id,
+        action: 'update',
+        changedBy: req.session.authorId,
+        changes: statusChanges,
+        reason: 'Quick status change',
+      });
+    }
 
     // Same condition as updateArticle's own cache-flush check — covers
     // both directions, an article that just went live and one that just

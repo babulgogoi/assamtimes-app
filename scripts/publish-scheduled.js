@@ -17,6 +17,7 @@ require('dotenv').config();
 
 const pool = require('../src/config/db');
 const articlesModel = require('../src/models/articles');
+const articleRevisionsModel = require('../src/models/articleRevisions');
 const { autoPostToFacebook, autoPostToTwitter } = require('../src/utils/autoPostSocial');
 
 async function main() {
@@ -29,6 +30,19 @@ async function main() {
 
   for (const article of published) {
     console.log(`[${new Date().toISOString()}] Published scheduled article ${article.id}: ${article.title}`);
+
+    // changedBy is null — there's no session here, this is a cron-triggered
+    // system transition, shown as "System" wherever changed_by is null in
+    // the admin revision history UI. The WHERE clause in
+    // publishDueScheduled() guarantees status was 'scheduled' immediately
+    // before this UPDATE, so the old value doesn't need a separate fetch.
+    await articleRevisionsModel.recordRevision({
+      articleId: article.id,
+      action: 'update',
+      changedBy: null,
+      changes: { status: { old: 'scheduled', new: 'published' } },
+      reason: 'Automatic scheduled publish',
+    });
 
     if (!article.fb_posted_at) {
       await autoPostToFacebook(article);

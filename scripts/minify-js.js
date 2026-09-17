@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const DIR = path.join(__dirname, '../public/js');
-const FILES = ['header.js', 'article.js', 'push.js', 'accessibility.js', 'mega-menu.js', 'liveblog.js', 'latest-news-tabs.js'];
+const FILES = ['header.js', 'article.js', 'push.js', 'accessibility.js', 'mega-menu.js', 'liveblog.js', 'latest-news-tabs.js', 'infinite-scroll.js'];
 
 async function main() {
   for (const file of FILES) {

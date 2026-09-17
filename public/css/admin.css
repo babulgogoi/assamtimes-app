@@ -856,6 +856,96 @@
   font-size: 0.75rem;
 }
 
+.revision-history {
+  max-height: 500px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.revision-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.85rem;
+}
+
+.revision-item:last-child {
+  border-bottom: none;
+}
+
+.revision-meta {
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.revision-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.revision-badge--create { background: #1c7c3f; }
+.revision-badge--update { background: #1a6fc4; }
+.revision-badge--delete { background: #c0392b; }
+.revision-badge--restore { background: #8a5fd6; }
+
+.revision-reason {
+  font-style: italic;
+  color: #666;
+  margin: 4px 0;
+}
+
+.revision-fields {
+  margin: 6px 0;
+  padding-left: 18px;
+  color: #333;
+}
+
+.revision-fields li {
+  margin-bottom: 2px;
+}
+
+.revision-body-diff {
+  margin-top: 4px;
+  padding: 8px;
+  background: #fafafa;
+  border-radius: 3px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.revision-body-diff ins {
+  background: #e3f6e8;
+  color: #1c7c3f;
+  text-decoration: none;
+}
+
+.revision-body-diff del {
+  background: #fdecea;
+  color: #b00;
+}
+
+.btn-restore-revision {
+  margin-top: 6px;
+  background: #eef2ff;
+  color: #3949ab;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.btn-restore-revision:hover { background: #dde3fb; }
+.btn-restore-revision:disabled { background: #eee; color: #999; cursor: not-allowed; }
+
 /* Admin Nav Dropdowns */
 
 /* Stretch all nav children to full header height so dropdowns anchor

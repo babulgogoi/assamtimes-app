@@ -10,6 +10,7 @@ const adminCommentsController = require('../controllers/adminCommentsController'
 const adminNewsletterController = require('../controllers/adminNewsletterController');
 const adminAccessibilityController = require('../controllers/adminAccessibilityController');
 const adminLiveblogController = require('../controllers/adminLiveblogController');
+const adminRevisionsController = require('../controllers/adminRevisionsController');
 const adminPushController = require('../controllers/adminPushController');
 const commentsModel = require('../models/comments');
 const { requireAuth } = require('../middleware/auth');
@@ -56,6 +57,10 @@ router.get('/articles/:id/edit', adminController.editArticleForm);
 router.post('/articles/:id', uploadWithErrorRedirect(uploadArticleFiles, (req) => `/admin/articles/${req.params.id}/edit`), csrfVerify, compressArticleImages, adminController.updateArticle);
 router.post('/articles/:id/delete', csrfVerify, adminController.deleteArticle);
 router.post('/articles/:id/status', csrfVerify, adminController.updateArticleStatus);
+router.get('/articles/:id/revisions', adminRevisionsController.listForArticle);
+router.post('/articles/:id/revisions/:revisionId/restore', csrfVerify, adminRevisionsController.restore);
+
+router.get('/revisions', adminRevisionsController.listAll);
 
 router.get('/authors', adminAuthorsController.listAuthors);
 router.get('/authors/new', adminAuthorsController.newAuthorForm);

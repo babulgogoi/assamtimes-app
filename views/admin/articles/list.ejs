@@ -82,8 +82,9 @@
               </form>
             <% } %>
 
-            <form method="post" action="/admin/articles/<%= article.id %>/delete" onsubmit="return confirm('Delete this article? This cannot be undone.');">
+            <form method="post" action="/admin/articles/<%= article.id %>/delete" onsubmit="return confirmDeleteArticle(this);">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="reason">
               <button type="submit" class="admin-btn admin-btn--danger">Delete</button>
             </form>
           </div>
@@ -105,3 +106,20 @@
     <a href="/admin/articles?q=<%= encodeURIComponent(q) %>&status=<%= encodeURIComponent(status) %>&page=<%= page + 1 %>">Next &raquo;</a>
   <% } %>
 </nav>
+
+<script>
+  // Deleting is a soft-delete (restorable via the article's Revision
+  // History panel or /admin/revisions), but still requires a reason,
+  // recorded on the resulting 'delete' revision.
+  function confirmDeleteArticle(form) {
+    var reason = prompt('Reason for deleting this article? (required — the article can be restored later from its Revision History)');
+    if (reason === null) return false;
+    reason = reason.trim();
+    if (!reason) {
+      alert('A reason is required to delete an article.');
+      return false;
+    }
+    form.reason.value = reason;
+    return true;
+  }
+</script>

@@ -1,6 +1,16 @@
+<%
+  // Set by publicController.articleInline for a fragment injected via
+  // infinite-scroll.js — '' for a normal full page load. Appended to every
+  // hardcoded id in this template (+ article-body-extras.ejs/
+  // article-comments.ejs) so a swapped-in article's markup never collides
+  // with the original page's ids in the DOM. See public/js/article.js's
+  // AT.initArticleInstance(suffix) for the matching client-side half.
+  var domSuffix = typeof domSuffix !== 'undefined' ? domSuffix : '';
+  var isInline = typeof isInline !== 'undefined' && isInline;
+%>
 <% if (sectionDesigns.article === 'B') { %>
 
-<article class="article-b">
+<article class="article-b" data-article-slug="<%= article.slug %>" data-instance-suffix="<%= domSuffix %>">
   <div class="article-b-col">
     <% if (typeof isPreview !== 'undefined' && isPreview) { %>
       <div class="preview-banner" role="alert">
@@ -11,6 +21,7 @@
     <% } %>
 
     <h1><%= article.title %></h1>
+    <div class="infinite-scroll-active-marker" data-suffix="<%= domSuffix %>" aria-hidden="true"></div>
 
     <div class="article-b-toolbar">
       <a href="https://wa.me/?text=<%= encodeURIComponent(article.title + ' ' + canonicalUrl) %>" class="article-b-share-icon" target="_blank" rel="noopener" aria-label="Share this article on WhatsApp" title="Share on WhatsApp">
@@ -22,11 +33,17 @@
       <a href="https://twitter.com/intent/tweet?url=<%= encodeURIComponent(canonicalUrl) %>&text=<%= encodeURIComponent(article.title) %>" class="article-b-share-icon" target="_blank" rel="noopener" aria-label="Share this article on X (Twitter)" title="Share on X">
         <%- include('../partials/icons/x') %>
       </a>
-      <button class="copy-link-btn js-copy-link" type="button" aria-label="Copy article link to clipboard" title="Copy link" data-copied-message="Link copied!">
+      <button class="copy-link-btn js-copy-link" type="button" aria-label="Copy article link to clipboard" title="Copy link" data-copied-message="Link copied!" data-url="<%= canonicalUrl %>">
         <%- include('../partials/icons/copy') %>
       </button>
+      <a href="/article/<%= article.slug %>/pdf" class="article-b-share-icon" target="_blank" aria-label="Print this article (downloads a PDF)" title="Print (PDF)">
+        <%- include('../partials/icons/print') %>
+      </a>
+      <a href="mailto:?subject=<%= encodeURIComponent(article.title) %>&body=<%= encodeURIComponent(canonicalUrl) %>" class="article-b-share-icon" aria-label="Share this article by email" title="Share by email">
+        <%- include('../partials/icons/email') %>
+      </a>
       <span class="toolbar-spacer"></span>
-      <a href="#comments" class="comments-btn" aria-label="View comments" title="View comments">
+      <a href="#comments<%= domSuffix %>" class="comments-btn" aria-label="View comments" title="View comments">
         <%- include('../partials/icons/comment') %> Comments <%= commentsCount %>
       </a>
     </div>
@@ -61,6 +78,8 @@
     </div>
 
     <%- include('../partials/article-body-extras') %>
+
+    <%- include('../partials/infinite-scroll-seed') %>
 
     <% if (article.author_username) { %>
       <div class="article-b-author-box">
@@ -110,14 +129,17 @@
   <% } %>
 </article>
 
-<script src="/js/<%= process.env.NODE_ENV === 'production' ? 'article.min.js' : 'article.js' %>" defer></script>
+<% if (!isInline) { %>
+<script src="/js/<%= process.env.NODE_ENV === 'production' ? 'article.min.js?v=2' : 'article.js' %>" defer></script>
+<script src="/js/<%= process.env.NODE_ENV === 'production' ? 'infinite-scroll.min.js' : 'infinite-scroll.js' %>" defer></script>
 <% if (article.is_liveblog && article.liveblog_status === 'live') { %>
   <script src="/js/<%= process.env.NODE_ENV === 'production' ? 'liveblog.min.js' : 'liveblog.js' %>" defer></script>
+<% } %>
 <% } %>
 
 <% } else { %>
 
-<div class="home-layout">
+<div class="home-layout" data-article-slug="<%= article.slug %>" data-instance-suffix="<%= domSuffix %>">
   <div class="home-main">
     <article class="article-detail">
       <div class="print-header">
@@ -135,7 +157,7 @@
         <a class="share-icon share-icon--x" href="https://twitter.com/intent/tweet?url=<%= encodeURIComponent(canonicalUrl) %>&text=<%= encodeURIComponent(article.title) %>" target="_blank" rel="noopener" aria-label="Share this article on X (Twitter)" title="Share on X">
           <%- include('../partials/icons/x') %>
         </a>
-        <button class="share-icon share-icon--copy js-copy-link" type="button" aria-label="Copy article link to clipboard" title="Copy link" data-copied-message="Link copied!">
+        <button class="share-icon share-icon--copy js-copy-link" type="button" aria-label="Copy article link to clipboard" title="Copy link" data-copied-message="Link copied!" data-url="<%= canonicalUrl %>">
           <%- include('../partials/icons/copy') %>
         </button>
       </div>
@@ -154,23 +176,24 @@
       <% } %>
 
       <div class="article-utility-bar">
-        <button class="util-btn" id="btnPrint" title="Print article" aria-label="Print article">
+        <button class="util-btn" id="btnPrint<%= domSuffix %>" title="Print article" aria-label="Print article">
           &#128424; <span class="util-label">Print</span>
         </button>
         <a class="util-btn" href="/article/<%= article.slug %>/pdf" title="Download as PDF" aria-label="Download article as PDF" target="_blank">
           &#128196; <span class="util-label">PDF</span>
         </a>
         <div class="util-divider"></div>
-        <button class="util-btn" id="btnFontDown" aria-label="Decrease text size">A-</button>
-        <button class="util-btn util-font-mid" id="btnFontReset" aria-label="Default text size">A</button>
-        <button class="util-btn" id="btnFontUp" aria-label="Increase text size">A+</button>
+        <button class="util-btn" id="btnFontDown<%= domSuffix %>" aria-label="Decrease text size">A-</button>
+        <button class="util-btn util-font-mid" id="btnFontReset<%= domSuffix %>" aria-label="Default text size">A</button>
+        <button class="util-btn" id="btnFontUp<%= domSuffix %>" aria-label="Increase text size">A+</button>
         <div class="util-divider"></div>
-        <button class="util-btn" id="btnDarkMode" aria-label="Toggle dark mode">&#127769;</button>
+        <button class="util-btn" id="btnDarkMode<%= domSuffix %>" aria-label="Toggle dark mode">&#127769;</button>
         <div class="util-divider"></div>
-        <button class="util-btn" id="btnHighContrast" aria-label="Toggle high contrast mode" title="High contrast mode">HC</button>
+        <button class="util-btn" id="btnHighContrast<%= domSuffix %>" aria-label="Toggle high contrast mode" title="High contrast mode">HC</button>
       </div>
 
       <h1 class="article-detail__title"><%= article.title %></h1>
+      <div class="infinite-scroll-active-marker" data-suffix="<%= domSuffix %>" aria-hidden="true"></div>
 
       <% if (article.subheadline) { %>
         <p class="article-detail__subheadline"><%= article.subheadline %></p>
@@ -187,12 +210,12 @@
           <a class="share-icon share-icon--sm share-icon--x" href="https://twitter.com/intent/tweet?url=<%= encodeURIComponent(canonicalUrl) %>&text=<%= encodeURIComponent(article.title) %>" target="_blank" rel="noopener" aria-label="Share this article on X (Twitter)" title="Share on X">
             <%- include('../partials/icons/x') %>
           </a>
-          <button class="share-icon share-icon--sm share-icon--copy js-copy-link" type="button" aria-label="Copy article link to clipboard" title="Copy link" data-copied-message="Link copied!">
+          <button class="share-icon share-icon--sm share-icon--copy js-copy-link" type="button" aria-label="Copy article link to clipboard" title="Copy link" data-copied-message="Link copied!" data-url="<%= canonicalUrl %>">
             <%- include('../partials/icons/copy') %>
           </button>
         </div>
 
-        <a class="comments-jump" href="#comments" aria-label="View comments" title="View comments">
+        <a class="comments-jump" href="#comments<%= domSuffix %>" aria-label="View comments" title="View comments">
           <%- include('../partials/icons/comment') %>
           <span>Comments <%= commentsCount %></span>
         </a>
@@ -251,8 +274,10 @@
 
       <%- include('../partials/article-body-extras') %>
 
+      <%- include('../partials/infinite-scroll-seed') %>
+
       <div class="article-actions">
-        <button class="like-btn" id="likeBtn" type="button" data-slug="<%= article.slug %>" aria-label="Like this article" title="Like this article">
+        <button class="like-btn" id="likeBtn<%= domSuffix %>" type="button" data-slug="<%= article.slug %>" aria-label="Like this article" title="Like this article">
           <svg class="like-btn__icon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
             <path d="M12 21s-6.7-4.35-9.3-8.1C.7 9.7 1.7 6 5 4.7c2-0.8 4 0 5 1.6 1-1.6 3-2.4 5-1.6 3.3 1.3 4.3 5 2.3 8.2C18.7 16.65 12 21 12 21z"/>
           </svg>
@@ -278,7 +303,7 @@
             <%- include('../partials/icons/linkedin') %><span>LinkedIn</span>
           </a>
 
-          <button class="share-pill share-pill--copy js-copy-link" type="button" aria-label="Copy article link to clipboard" title="Copy link" data-copied-message="Link copied!">
+          <button class="share-pill share-pill--copy js-copy-link" type="button" aria-label="Copy article link to clipboard" title="Copy link" data-copied-message="Link copied!" data-url="<%= canonicalUrl %>">
             <%- include('../partials/icons/copy') %><span>Copy link</span>
           </button>
 
@@ -381,9 +406,12 @@
   </aside>
 </div>
 
-<script src="/js/<%= process.env.NODE_ENV === 'production' ? 'article.min.js' : 'article.js' %>" defer></script>
+<% if (!isInline) { %>
+<script src="/js/<%= process.env.NODE_ENV === 'production' ? 'article.min.js?v=2' : 'article.js' %>" defer></script>
+<script src="/js/<%= process.env.NODE_ENV === 'production' ? 'infinite-scroll.min.js' : 'infinite-scroll.js' %>" defer></script>
 <% if (article.is_liveblog && article.liveblog_status === 'live') { %>
   <script src="/js/<%= process.env.NODE_ENV === 'production' ? 'liveblog.min.js' : 'liveblog.js' %>" defer></script>
+<% } %>
 <% } %>
 
 <% } %>

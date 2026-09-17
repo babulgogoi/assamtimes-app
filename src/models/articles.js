@@ -15,7 +15,7 @@ async function getLatestPublished({ limit, offset = 0, excludeCategory = null })
     `SELECT ${ARTICLE_CARD_FIELDS}
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id
-     WHERE a.status = 'published' AND a.is_advertisement = false
+     WHERE a.status = 'published' AND a.is_advertisement = false AND a.deleted_at IS NULL
        AND ($3::text IS NULL OR a.category IS DISTINCT FROM $3)
      ORDER BY a.published_at DESC
      LIMIT $1 OFFSET $2`,
@@ -26,7 +26,7 @@ async function getLatestPublished({ limit, offset = 0, excludeCategory = null })
 
 async function countPublished() {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) AS total FROM articles WHERE status = 'published' AND is_advertisement = false`
+    `SELECT COUNT(*) AS total FROM articles WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL`
   );
   return Number(rows[0].total);
 }
@@ -36,7 +36,7 @@ async function getMostViewed({ limit, offset = 0 }) {
     `SELECT ${ARTICLE_CARD_FIELDS}
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id
-     WHERE a.status = 'published' AND a.is_advertisement = false
+     WHERE a.status = 'published' AND a.is_advertisement = false AND a.deleted_at IS NULL
      ORDER BY a.views_count DESC, a.published_at DESC
      LIMIT $1 OFFSET $2`,
     [limit, offset]
@@ -49,7 +49,7 @@ async function getEditorsPicks({ limit }) {
     `SELECT ${ARTICLE_CARD_FIELDS}
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id
-     WHERE a.status = 'published' AND a.is_editors_pick = true AND a.is_advertisement = false
+     WHERE a.status = 'published' AND a.is_editors_pick = true AND a.is_advertisement = false AND a.deleted_at IS NULL
      ORDER BY a.published_at DESC
      LIMIT $1`,
     [limit]
@@ -57,6 +57,10 @@ async function getEditorsPicks({ limit }) {
   return rows;
 }
 
+// Deliberately excludes soft-deleted articles even for an admin-preview
+// session — unlike the draft/scheduled preview bypass in publicController,
+// a deleted article is not "not yet public", it's withdrawn, and stays
+// reachable only via the admin edit page / revision history + restore.
 async function getBySlug(slug) {
   const { rows } = await pool.query(
     `SELECT
@@ -68,20 +72,23 @@ async function getBySlug(slug) {
        au.bio AS author_bio, au.photo AS author_photo
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id
-     WHERE a.slug = $1`,
+     WHERE a.slug = $1 AND a.deleted_at IS NULL`,
     [slug]
   );
   return rows[0] || null;
 }
 
-async function getRelatedByCategory({ category, excludeId, limit }) {
+// excludeIds is an array, not a single id — the infinite-scroll chain
+// (publicController.articleInline) needs to exclude every article already
+// shown earlier in the same session's chain, not just the current one.
+async function getRelatedByCategory({ category, excludeIds, limit }) {
   const { rows } = await pool.query(
     `SELECT id, slug, title, excerpt, featured_image, published_at, views_count
      FROM articles
-     WHERE status = 'published' AND is_advertisement = false AND category = $1 AND id <> $2
+     WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL AND category = $1 AND id <> ALL($2::int[])
      ORDER BY published_at DESC
      LIMIT $3`,
-    [category, excludeId, limit]
+    [category, excludeIds, limit]
   );
   return rows;
 }
@@ -90,7 +97,7 @@ async function getOtherByAuthor({ authorId, excludeId, limit }) {
   const { rows } = await pool.query(
     `SELECT id, slug, title, excerpt, featured_image, published_at, views_count
      FROM articles
-     WHERE status = 'published' AND is_advertisement = false AND author_id = $1 AND id <> $2
+     WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL AND author_id = $1 AND id <> $2
      ORDER BY published_at DESC
      LIMIT $3`,
     [authorId, excludeId, limit]
@@ -115,7 +122,7 @@ async function getByCategory({ category, limit, offset = 0 }) {
     `SELECT ${ARTICLE_CARD_FIELDS}
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id
-     WHERE a.status = 'published' AND a.is_advertisement = false AND a.category = $1
+     WHERE a.status = 'published' AND a.is_advertisement = false AND a.deleted_at IS NULL AND a.category = $1
      ORDER BY a.published_at DESC
      LIMIT $2 OFFSET $3`,
     [category, limit, offset]
@@ -125,7 +132,7 @@ async function getByCategory({ category, limit, offset = 0 }) {
 
 async function countByCategory(category) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) AS total FROM articles WHERE status = 'published' AND is_advertisement = false AND category = $1`,
+    `SELECT COUNT(*) AS total FROM articles WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL AND category = $1`,
     [category]
   );
   return Number(rows[0].total);
@@ -136,7 +143,7 @@ async function getByTag({ tag, limit, offset = 0 }) {
     `SELECT ${ARTICLE_CARD_FIELDS}
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id
-     WHERE a.status = 'published' AND a.is_advertisement = false AND $1 = ANY(a.tags)
+     WHERE a.status = 'published' AND a.is_advertisement = false AND a.deleted_at IS NULL AND $1 = ANY(a.tags)
      ORDER BY a.published_at DESC
      LIMIT $2 OFFSET $3`,
     [tag, limit, offset]
@@ -146,7 +153,7 @@ async function getByTag({ tag, limit, offset = 0 }) {
 
 async function countByTag(tag) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) AS total FROM articles WHERE status = 'published' AND is_advertisement = false AND $1 = ANY(tags)`,
+    `SELECT COUNT(*) AS total FROM articles WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL AND $1 = ANY(tags)`,
     [tag]
   );
   return Number(rows[0].total);
@@ -169,7 +176,7 @@ async function getPopularTags(limit = 20) {
   const { rows } = await pool.query(
     `SELECT unnest(tags) AS tag, COUNT(*) AS count
      FROM articles
-     WHERE status = 'published' AND is_advertisement = false AND tags <> '{}'
+     WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL AND tags <> '{}'
      GROUP BY tag
      ORDER BY count DESC
      LIMIT $1`,
@@ -183,7 +190,7 @@ async function getPopularTags(limit = 20) {
 // Sitemap only — every distinct tag across published articles, no count.
 async function getDistinctTags() {
   const { rows } = await pool.query(
-    `SELECT DISTINCT unnest(tags) AS tag FROM articles WHERE status = 'published' AND is_advertisement = false ORDER BY tag`
+    `SELECT DISTINCT unnest(tags) AS tag FROM articles WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL ORDER BY tag`
   );
   return rows.map((r) => r.tag);
 }
@@ -222,6 +229,7 @@ async function getOnThisDay() {
        AND EXTRACT(YEAR FROM a.published_at) < $3
        AND a.status = 'published'
        AND a.is_advertisement = false
+       AND a.deleted_at IS NULL
      ORDER BY pub_year DESC, a.published_at DESC`,
     [now.getMonth() + 1, now.getDate(), now.getFullYear()]
   );
@@ -233,7 +241,7 @@ async function getOnThisDay() {
 
 async function getDistinctPublishedCategories() {
   const { rows } = await pool.query(
-    `SELECT DISTINCT category FROM articles WHERE status = 'published' AND is_advertisement = false AND category IS NOT NULL ORDER BY category`
+    `SELECT DISTINCT category FROM articles WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL AND category IS NOT NULL ORDER BY category`
   );
   return rows.map((r) => r.category);
 }
@@ -243,7 +251,7 @@ async function getByAuthorId({ authorId, limit, offset = 0 }) {
     `SELECT ${ARTICLE_CARD_FIELDS}
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id
-     WHERE a.status = 'published' AND a.is_advertisement = false AND a.author_id = $1
+     WHERE a.status = 'published' AND a.is_advertisement = false AND a.deleted_at IS NULL AND a.author_id = $1
      ORDER BY a.published_at DESC
      LIMIT $2 OFFSET $3`,
     [authorId, limit, offset]
@@ -253,7 +261,7 @@ async function getByAuthorId({ authorId, limit, offset = 0 }) {
 
 async function countByAuthorId(authorId) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) AS total FROM articles WHERE status = 'published' AND is_advertisement = false AND author_id = $1`,
+    `SELECT COUNT(*) AS total FROM articles WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL AND author_id = $1`,
     [authorId]
   );
   return Number(rows[0].total);
@@ -281,7 +289,7 @@ async function search({ query, limit, offset = 0 }) {
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id,
           websearch_to_tsquery('english', $1) tsq
-     WHERE a.status = 'published' AND a.is_advertisement = false AND a.search_vector @@ tsq
+     WHERE a.status = 'published' AND a.is_advertisement = false AND a.deleted_at IS NULL AND a.search_vector @@ tsq
      ORDER BY rank DESC, a.published_at DESC
      LIMIT $2 OFFSET $3`,
     [query, limit, offset]
@@ -292,7 +300,7 @@ async function search({ query, limit, offset = 0 }) {
 async function countSearch(query) {
   const { rows } = await pool.query(
     `SELECT COUNT(*) AS total FROM articles
-     WHERE status = 'published' AND is_advertisement = false AND search_vector @@ websearch_to_tsquery('english', $1)`,
+     WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL AND search_vector @@ websearch_to_tsquery('english', $1)`,
     [query]
   );
   return Number(rows[0].total);
@@ -304,7 +312,7 @@ async function getById(id) {
        a.id, a.slug, a.title, a.subheadline, a.body, a.excerpt, a.featured_image, a.featured_image_caption, a.featured_image_alt, a.gallery_images,
        a.video_url, a.audio_file, a.pdf_file, a.author_id, a.category, a.status, a.is_editors_pick,
        a.is_breaking, a.breaking_expires_at, a.tags, a.dateline, a.is_liveblog, a.liveblog_status,
-       a.is_advertisement, a.published_at, a.views_count, a.fb_posted_at, a.twitter_posted_at,
+       a.is_advertisement, a.published_at, a.views_count, a.fb_posted_at, a.twitter_posted_at, a.deleted_at,
        au.username AS author_username, au.display_name AS author_name
      FROM articles a
      LEFT JOIN authors au ON au.id = a.author_id
@@ -322,8 +330,13 @@ async function markTwitterPosted(id) {
   await pool.query('UPDATE articles SET twitter_posted_at = now() WHERE id = $1', [id]);
 }
 
+// Soft-deleted articles are excluded unconditionally (not just when no
+// status filter is picked) — they're reachable via /admin/articles/:id/edit
+// directly (getById doesn't filter deleted_at) or the global revision log,
+// not via this list, matching "deleted" reading as actually gone from an
+// editor's working list rather than merely another status value to filter by.
 async function listForAdmin({ limit, offset = 0, q = '', status = '' }) {
-  const conditions = [];
+  const conditions = ['a.deleted_at IS NULL'];
   const params = [];
 
   if (q) {
@@ -356,7 +369,7 @@ async function listForAdmin({ limit, offset = 0, q = '', status = '' }) {
 }
 
 async function countForAdmin({ q = '', status = '' }) {
-  const conditions = [];
+  const conditions = ['deleted_at IS NULL'];
   const params = [];
 
   if (q) {
@@ -421,13 +434,22 @@ async function update(id, data) {
   );
 }
 
-async function remove(id) {
-  await pool.query('DELETE FROM articles WHERE id = $1', [id]);
+// Hides the article from every public query above and from the default
+// admin list, but keeps the row + its article_revisions history intact —
+// restorable via articleRevisionsModel.reconstructState, same as any other
+// version. Replaces the old hard DELETE now that revision history exists
+// to preserve.
+async function softDelete(id) {
+  await pool.query('UPDATE articles SET deleted_at = now() WHERE id = $1', [id]);
+}
+
+async function undelete(id) {
+  await pool.query('UPDATE articles SET deleted_at = NULL WHERE id = $1', [id]);
 }
 
 async function getAllPublishedForSitemap() {
   const { rows } = await pool.query(
-    `SELECT slug, published_at, updated_at FROM articles WHERE status = 'published' AND is_advertisement = false ORDER BY published_at DESC`
+    `SELECT slug, published_at, updated_at FROM articles WHERE status = 'published' AND is_advertisement = false AND deleted_at IS NULL ORDER BY published_at DESC`
   );
   return rows;
 }
@@ -438,7 +460,7 @@ async function getAllPublishedForSitemap() {
 // since feed URLs are commonly typed/linked lowercase (e.g. /feed/category/politics)
 // while articles.category is stored capitalized.
 async function getForFeed({ category = null, authorId = null, limit }) {
-  const conditions = [`a.status = 'published'`, `a.is_advertisement = false`];
+  const conditions = [`a.status = 'published'`, `a.is_advertisement = false`, `a.deleted_at IS NULL`];
   const params = [];
 
   if (category) {
@@ -473,7 +495,7 @@ async function getForFeed({ category = null, authorId = null, limit }) {
 async function publishDueScheduled() {
   const { rows } = await pool.query(
     `UPDATE articles SET status = 'published', updated_at = now()
-     WHERE status = 'scheduled' AND published_at <= now()
+     WHERE status = 'scheduled' AND published_at <= now() AND deleted_at IS NULL
      RETURNING *`
   );
   return rows;
@@ -496,7 +518,7 @@ async function updateStatus(id, status) {
 async function getBreakingNews({ limit = 5 } = {}) {
   const { rows } = await pool.query(
     `SELECT id, title, slug FROM articles
-     WHERE is_breaking = true AND status = 'published' AND is_advertisement = false
+     WHERE is_breaking = true AND status = 'published' AND is_advertisement = false AND deleted_at IS NULL
        AND published_at >= NOW() - INTERVAL '24 hours'
        AND (breaking_expires_at IS NULL OR breaking_expires_at > NOW())
      ORDER BY published_at DESC
@@ -541,7 +563,8 @@ module.exports = {
   slugExists,
   create,
   update,
-  remove,
+  softDelete,
+  undelete,
   markFacebookPosted,
   markTwitterPosted,
   getAllPublishedForSitemap,

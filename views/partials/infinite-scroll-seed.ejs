@@ -1,0 +1,17 @@
+<%# Included once per article instance (base page load AND every fragment
+    returned by publicController.articleInline), right after
+    article-body-extras. Two jobs: (1) a sentinel element infinite-scroll.js
+    observes to know when to prefetch the next article, and (2) a small
+    JSON blob giving the client this instance's own starting point for the
+    chain (its slug + the first related article it could continue to).
+    Only actually consumed by the client for the base (domSuffix === '')
+    instance — injected fragments get the same info more directly from the
+    JSON envelope /article/:slug/inline already returns (nextSlug/
+    excludeIds), so this is redundant-but-harmless for those; kept uniform
+    here so this template never needs an isInline branch. %>
+<div class="infinite-scroll-sentinel" data-infinite-sentinel data-suffix="<%= domSuffix %>"></div>
+<script type="application/json" id="infiniteScrollSeed<%= domSuffix %>"><%- JSON.stringify({
+  slug: article.slug,
+  nextSlug: (related && related.length) ? related[0].slug : null,
+  excludeIds: [article.id],
+}).replace(/</g, '\\u003c') %></script>

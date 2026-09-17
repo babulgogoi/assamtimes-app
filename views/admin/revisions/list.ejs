@@ -1,0 +1,105 @@
+<div class="admin-list-header">
+  <h1>Revision History (<%= total %>)</h1>
+</div>
+
+<form method="get" action="/admin/revisions" class="admin-filter-bar">
+  <input type="text" name="article_id" placeholder="Article ID…" value="<%= filters.articleId %>" style="max-width:120px">
+  <select name="changed_by">
+    <option value="">All Editors</option>
+    <option value="system" <%= filters.changedBy === 'system' ? 'selected' : '' %>>System (automatic)</option>
+    <% authors.forEach(function (a) { %>
+      <option value="<%= a.id %>" <%= String(filters.changedBy) === String(a.id) ? 'selected' : '' %>><%= a.display_name || a.username %></option>
+    <% }) %>
+  </select>
+  <select name="action">
+    <option value="">All Actions</option>
+    <option value="create" <%= filters.action === 'create' ? 'selected' : '' %>>Create</option>
+    <option value="update" <%= filters.action === 'update' ? 'selected' : '' %>>Update</option>
+    <option value="delete" <%= filters.action === 'delete' ? 'selected' : '' %>>Delete</option>
+    <option value="restore" <%= filters.action === 'restore' ? 'selected' : '' %>>Restore</option>
+  </select>
+  <input type="date" name="date_from" value="<%= filters.dateFrom %>">
+  <input type="date" name="date_to" value="<%= filters.dateTo %>">
+  <button type="submit" class="admin-btn">Filter</button>
+  <a class="admin-btn" href="/admin/revisions">Clear</a>
+</form>
+
+<div class="revision-history" id="globalRevisionHistory">
+  <% if (!revisions.length) { %>
+    <p class="admin-form-hint">No revisions found.</p>
+  <% } %>
+  <% revisions.forEach(function (r) { %>
+    <div class="revision-item">
+      <div class="revision-meta">
+        <span class="revision-badge revision-badge--<%= r.action %>"><%= r.action.charAt(0).toUpperCase() + r.action.slice(1) %></span>
+        <% if (r.article_title) { %>
+          <a href="/admin/articles/<%= r.article_id %>/edit"><%= r.article_title %></a>
+        <% } else { %>
+          <span>Article #<%= r.article_id %></span>
+        <% } %>
+        &mdash; by <%= r.changed_by_name || r.changed_by_username || 'System' %>
+        on <%= new Date(r.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %>
+      </div>
+      <% if (r.reason) { %>
+        <div class="revision-reason">Reason: <%= r.reason %></div>
+      <% } %>
+      <% if (r.summary && r.summary.length) { %>
+        <ul class="revision-fields">
+          <% r.summary.forEach(function (s) { %>
+            <li><strong><%= s.label %>:</strong> <%= s.oldDisplay %> &rarr; <%= s.newDisplay %></li>
+          <% }) %>
+        </ul>
+      <% } %>
+      <% if (r.bodyDiff) { %>
+        <details><summary>Body changed — view diff</summary><div class="revision-body-diff"><%- r.bodyDiff %></div></details>
+      <% } %>
+      <button type="button" class="btn-restore-revision" data-article-id="<%= r.article_id %>" data-revision-id="<%= r.id %>">Restore this version</button>
+    </div>
+  <% }) %>
+</div>
+
+<nav class="pagination">
+  <% var qs = 'article_id=' + encodeURIComponent(filters.articleId) + '&changed_by=' + encodeURIComponent(filters.changedBy) + '&action=' + encodeURIComponent(filters.action) + '&date_from=' + encodeURIComponent(filters.dateFrom) + '&date_to=' + encodeURIComponent(filters.dateTo); %>
+  <% if (page > 1) { %>
+    <a href="/admin/revisions?<%= qs %>&page=<%= page - 1 %>">&laquo; Prev</a>
+  <% } %>
+  <span>Page <%= page %> of <%= totalPages %></span>
+  <% if (page < totalPages) { %>
+    <a href="/admin/revisions?<%= qs %>&page=<%= page + 1 %>">Next &raquo;</a>
+  <% } %>
+</nav>
+
+<script>
+  (function () {
+    var panel = document.getElementById('globalRevisionHistory');
+    var csrfToken = '<%= csrfToken %>';
+
+    panel.addEventListener('click', async function (e) {
+      if (!e.target.classList.contains('btn-restore-revision')) return;
+      var articleId = e.target.dataset.articleId;
+      var revisionId = e.target.dataset.revisionId;
+      if (!confirm('Restore this article to this version? This will overwrite its current content.')) return;
+
+      e.target.disabled = true;
+      e.target.textContent = 'Restoring...';
+      try {
+        const res = await fetch('/admin/articles/' + articleId + '/revisions/' + revisionId + '/restore', {
+          method: 'POST',
+          headers: { 'x-csrf-token': csrfToken },
+        });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(data.error || 'Restore failed.');
+          e.target.disabled = false;
+          e.target.textContent = 'Restore this version';
+        }
+      } catch (err) {
+        alert('Restore failed.');
+        e.target.disabled = false;
+        e.target.textContent = 'Restore this version';
+      }
+    });
+  })();
+</script>

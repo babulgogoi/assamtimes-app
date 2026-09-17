@@ -309,11 +309,11 @@
   <%- include('partials/mega-menu') %>
   <div id="mobileMenu" class="mobile-menu" aria-hidden="true" role="dialog" aria-label="Mobile navigation">
     <nav class="mobile-menu__nav">
-      <a href="/">Home</a>
-      <a href="/page/about-us-8">About Us</a>
-      <a href="/page/join-us">Team Up</a>
-      <a href="/news">News</a>
-      <a href="/on-this-day">On This Day</a>
+      <% (typeof menuItems !== 'undefined' ? menuItems : []).forEach(function (item) { %>
+        <% if (item.url) { %>
+          <a href="<%= item.url %>"><%= item.label %></a>
+        <% } %>
+      <% }) %>
     </nav>
     <div class="mobile-menu__backdrop" id="mobileMenuBackdrop"></div>
   </div>

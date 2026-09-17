@@ -224,7 +224,7 @@ async function articleDetail(req, res, next) {
     const [related, authorArticles, comments, commentsCount, popularTags, coauthors, liveblogEntriesRaw, onThisDayAll, sectionDesigns] = await Promise.all([
       articlesModel.getRelatedByCategory({
         category: article.category,
-        excludeId: article.id,
+        excludeIds: [article.id],
         limit: 5,
       }),
       article.author_id
@@ -268,6 +268,14 @@ async function articleDetail(req, res, next) {
       commentForm: null,
       isAdmin,
       isPreview,
+      // Real render locals (not just a default synthesized inside
+      // article.ejs's own scriptlet) — EJS's include() only passes through
+      // the actual locals object from this res.render() call, not
+      // variables a template declares itself via `var`, so domSuffix/
+      // isInline must be here for article-body-extras.ejs/
+      // article-comments.ejs/infinite-scroll-seed.ejs to see them at all.
+      domSuffix: '',
+      isInline: false,
       sectionDesigns,
       canonicalUrl: `${process.env.SITE_URL}/article/${article.slug}`,
       hcaptchaSiteKey: process.env.HCAPTCHA_SITE_KEY,
@@ -303,7 +311,7 @@ async function submitComment(req, res, next) {
 
     if (errors.length) {
       const [related, authorArticles, comments, commentsCount, popularTags, coauthors, liveblogEntriesRaw, onThisDayAll, sectionDesigns] = await Promise.all([
-        articlesModel.getRelatedByCategory({ category: article.category, excludeId: article.id, limit: 5 }),
+        articlesModel.getRelatedByCategory({ category: article.category, excludeIds: [article.id], limit: 5 }),
         article.author_id
           ? articlesModel.getOtherByAuthor({ authorId: article.author_id, excludeId: article.id, limit: 5 })
           : [],
@@ -333,6 +341,8 @@ async function submitComment(req, res, next) {
         commentErrors: errors,
         commentForm: { name, email, body },
         isAdmin: !!(req.session && req.session.authorId),
+        domSuffix: '',
+        isInline: false,
         sectionDesigns,
         canonicalUrl: `${process.env.SITE_URL}/article/${article.slug}`,
         hcaptchaSiteKey: process.env.HCAPTCHA_SITE_KEY,
@@ -362,6 +372,141 @@ async function likeArticle(req, res, next) {
 
     const likes = await articlesModel.incrementLikeCount(article.id);
     res.json({ likes });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /article/:slug/inline?exclude=1,2,3&instance=2 — powers the infinite-
+// scroll "next article" swap-in (public/js/infinite-scroll.js). Renders the
+// exact same public/article template used for a normal page load (both
+// design_article A and B), just with layout:false so only the fragment
+// comes back, wrapped in JSON with the metadata the client needs to update
+// <title>/canonical/OG tags and fire GA events without a second fetch.
+// `instance` becomes the DOM id suffix (domSuffix) every id in article.ejs/
+// article-body-extras.ejs/article-comments.ejs gets appended with, so a
+// fragment injected alongside the original page never collides with it.
+// No admin-preview support here (deliberately) — infinite scroll only ever
+// chains through published articles, keeping this endpoint's visibility
+// rule simple (same as likeArticle above) rather than threading an admin
+// session through a client-driven scroll feature.
+async function articleInline(req, res, next) {
+  try {
+    const article = await articlesModel.getBySlug(req.params.slug);
+    if (!article || article.status !== 'published') {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    const excludeIds = [article.id];
+    (String(req.query.exclude || ''))
+      .split(',')
+      .map((s) => parseInt(s, 10))
+      .filter((n) => Number.isInteger(n))
+      .slice(0, 50)
+      .forEach((id) => { if (!excludeIds.includes(id)) excludeIds.push(id); });
+
+    let instanceNum = parseInt(req.query.instance, 10);
+    if (!Number.isInteger(instanceNum) || instanceNum < 1) instanceNum = 1;
+    instanceNum = Math.min(instanceNum, 999);
+    const domSuffix = '-inline' + instanceNum;
+
+    const [related, authorArticles, comments, commentsCount, popularTags, coauthors, liveblogEntriesRaw, onThisDayAll, sectionDesigns] = await Promise.all([
+      articlesModel.getRelatedByCategory({ category: article.category, excludeIds, limit: 5 }),
+      article.author_id
+        ? articlesModel.getOtherByAuthor({ authorId: article.author_id, excludeId: article.id, limit: 5 })
+        : [],
+      commentsModel.getApprovedByArticleId(article.id),
+      commentsModel.countApproved(article.id),
+      articlesModel.getPopularTags(20),
+      articleAuthorsModel.getByArticleId(article.id),
+      article.is_liveblog ? liveblogEntriesModel.listByArticleId(article.id, 100) : [],
+      articlesModel.getOnThisDay(),
+      siteSettingsModel.getSectionDesigns(),
+    ]);
+    const liveblogEntries = liveblogEntriesRaw.map((e) => ({ ...e, content_html: renderEntryContent(e.content) }));
+    const canonicalUrl = `${process.env.SITE_URL}/article/${article.slug}`;
+
+    res.render(
+      'public/article',
+      {
+        layout: false,
+        title: article.title,
+        article,
+        bodyWithDateline: buildBodyWithDateline(article),
+        related,
+        authorArticles,
+        popularTags,
+        coauthors,
+        liveblogEntries,
+        onThisDayArticles: onThisDayAll.slice(0, 5),
+        readingTime: calculateReadingTime(article.body),
+        comments,
+        commentsCount,
+        commentSubmitted: false,
+        commentErrors: [],
+        commentForm: null,
+        isAdmin: false,
+        isPreview: false,
+        isInline: true,
+        domSuffix,
+        sectionDesigns,
+        canonicalUrl,
+        hcaptchaSiteKey: process.env.HCAPTCHA_SITE_KEY,
+      },
+      (err, html) => {
+        if (err) return next(err);
+
+        // Same formulas layout.ejs uses to build OG/meta tags for a normal
+        // article page load (layout.ejs:31-34) — duplicated rather than
+        // shared, since layout.ejs computes these inline in EJS and isn't
+        // something this controller can require(). Keep in sync if either
+        // changes.
+        const ogDescription = article.subheadline
+          ? article.subheadline
+          : (article.body ? article.body.replace(/<[^>]*>/g, '').substring(0, 160) : '');
+        const ogImage = process.env.SITE_URL + (article.featured_image || '/uploads/defaults/at-news.png');
+
+        res.json({
+          html,
+          slug: article.slug,
+          title: article.title,
+          canonicalUrl,
+          metaDescription: ogDescription,
+          ogImage,
+          commentsCount,
+          nextSlug: related.length ? related[0].slug : null,
+          excludeIds,
+          tracking: {
+            article_id: article.id,
+            article_title: (article.title || '').slice(0, 100),
+            article_category: article.category || '',
+            article_author: article.author_name || '',
+            published_year: article.published_at ? new Date(article.published_at).getFullYear() : null,
+          },
+        });
+      }
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+// POST /article/:slug/view — fired by infinite-scroll.js only once a
+// swapped-in article has actually scrolled into the "active" position
+// (pushState time), not when it's merely prefetched near the bottom of the
+// previous article. Keeping this decoupled from articleInline above matters
+// for views_count accuracy: prefetching content the reader never actually
+// reaches must not inflate the count, same reasoning already applied to
+// admin-preview skipping incrementViewCount in articleDetail.
+async function articleMarkViewed(req, res, next) {
+  try {
+    const article = await articlesModel.getBySlug(req.params.slug);
+    if (!article || article.status !== 'published') {
+      return res.status(404).json({ error: 'Article not found' });
+    }
+
+    await articlesModel.incrementViewCount(article.id);
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }
@@ -722,6 +867,8 @@ module.exports = {
   newsPage,
   mostReadPage,
   articleDetail,
+  articleInline,
+  articleMarkViewed,
   submitComment,
   likeArticle,
   categoryPage,

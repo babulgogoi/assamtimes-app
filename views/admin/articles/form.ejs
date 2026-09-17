@@ -34,6 +34,19 @@
   <p class="admin-social-status admin-social-status--error">&#9888; X post failed — check logs</p>
 <% } %>
 
+<% if (article && article.deleted_at) { %>
+  <p class="admin-social-status admin-social-status--error">
+    &#128465; This article was deleted on <%= new Date(article.deleted_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %> and is hidden from public view. Restore it from the Revision History below.
+  </p>
+<% } %>
+
+<% if (article && article.id) { %>
+  <fieldset class="admin-fieldset">
+    <legend>Revision History</legend>
+    <div class="revision-history" id="revisionHistory" data-article-id="<%= article.id %>">Loading history...</div>
+  </fieldset>
+<% } %>
+
 <form class="admin-form" method="post" action="<%= article ? '/admin/articles/' + article.id : '/admin/articles' %>" enctype="multipart/form-data">
   <input type="hidden" name="_csrf" id="csrfTokenField" value="<%= csrfToken %>">
 
@@ -294,6 +307,13 @@
     stays live and accessible via direct link.
   </p>
 
+  <% if (article) { %>
+    <label>
+      Reason for this edit <span class="admin-form-hint">(optional — shown in Revision History)</span>
+      <input type="text" name="revision_reason" maxlength="500" value="<%= article.revision_reason || '' %>" placeholder="e.g. Fixed typo, updated figures after correction">
+    </label>
+  <% } %>
+
   <div class="form-actions">
     <button type="submit" name="action" value="save" class="btn-save-article"><%= article ? 'Save Changes' : 'Create Article' %></button>
 
@@ -316,6 +336,45 @@
     promotion: false,
     plugins: 'lists link image table code fullscreen wordcount',
     toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist | blockquote link image table | code fullscreen',
+    // TinyMCE's default relative_urls:true rewrites any same-origin image src
+    // (typed or uploaded) into a path relative to the admin edit page's own
+    // URL (e.g. "../../uploads/..."), which is then stored verbatim in
+    // articles.body. That happens to still resolve correctly on /article/:slug
+    // pages today only because that URL is shallow enough for the browser's
+    // URL resolution to clamp the ".." at the root — incidental, not
+    // guaranteed. Disabled so uploaded/typed image URLs are stored as plain
+    // absolute paths (/uploads/...), matching every other image field in
+    // this app (featured_image, gallery_images).
+    relative_urls: false,
+    // Adds an "Upload" tab to the existing Insert/Edit Image dialog, next to
+    // Source URL. Reuses the same AJAX endpoint that powers the Featured
+    // Image / Gallery Images instant-upload UI (admin-article-image.js) —
+    // type:'gallery' so it skips generating the featured-image-only
+    // -thumb/-large/-article size variants, which inline body images never use.
+    images_upload_handler: function (blobInfo) {
+      return new Promise(function (resolve, reject) {
+        var csrfToken = document.getElementById('csrfTokenField').value;
+        var fd = new FormData();
+        fd.append('image', blobInfo.blob(), blobInfo.filename());
+        fd.append('type', 'gallery');
+        fd.append('_csrf', csrfToken);
+        fetch('/admin/articles/upload-image', {
+          method: 'POST',
+          body: fd,
+          credentials: 'same-origin',
+          headers: { 'x-csrf-token': csrfToken },
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (!data.success) {
+              reject(data.error || 'Upload failed');
+              return;
+            }
+            resolve(data.url);
+          })
+          .catch(function () { reject('Image upload failed. Please try again.'); });
+      });
+    },
   });
 
   (function () {
@@ -629,6 +688,104 @@
     });
 
     loadAdminEntries();
+  })();
+
+  (function () {
+    var historyPanel = document.getElementById('revisionHistory');
+    if (!historyPanel) return;
+
+    var articleId = historyPanel.dataset.articleId;
+    var ACTION_LABELS = { create: 'Created', update: 'Updated', delete: 'Deleted', restore: 'Restored' };
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function formatWhen(iso) {
+      var d = new Date(iso);
+      return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch('/admin/articles/' + articleId + '/revisions');
+        const data = await res.json();
+        var revisions = data.revisions || [];
+        if (!revisions.length) {
+          historyPanel.innerHTML = '<p class="admin-form-hint">No history yet.</p>';
+          return;
+        }
+        historyPanel.innerHTML = revisions.map(function (r, i) {
+          var who = escapeHtml(r.changed_by_name || r.changed_by_username || 'System');
+          var fieldsHtml = (r.summary || []).map(function (s) {
+            return '<li><strong>' + escapeHtml(s.label) + ':</strong> ' + escapeHtml(s.oldDisplay) + ' &rarr; ' + escapeHtml(s.newDisplay) + '</li>';
+          }).join('');
+          var bodyHtml = r.bodyDiff
+            ? '<details><summary>Body changed — view diff</summary><div class="revision-body-diff">' + r.bodyDiff + '</div></details>'
+            : '';
+          var reasonHtml = r.reason
+            ? '<div class="revision-reason">Reason: ' + escapeHtml(r.reason) + '</div>'
+            : '';
+          // Restoring "to" the current live state (the most recent
+          // revision) is a meaningless no-op, so that one row skips the
+          // button — every earlier row keeps it.
+          var restoreBtn = i === 0
+            ? ''
+            : '<button type="button" class="btn-restore-revision" data-revision-id="' + r.id + '">Restore this version</button>';
+
+          return (
+            '<div class="revision-item">' +
+              '<div class="revision-meta">' +
+                '<span class="revision-badge revision-badge--' + r.action + '">' + (ACTION_LABELS[r.action] || r.action) + '</span> ' +
+                'by ' + who + ' on ' + formatWhen(r.created_at) +
+              '</div>' +
+              reasonHtml +
+              (fieldsHtml ? '<ul class="revision-fields">' + fieldsHtml + '</ul>' : '') +
+              bodyHtml +
+              restoreBtn +
+            '</div>'
+          );
+        }).join('');
+      } catch (e) {
+        historyPanel.innerHTML = '<p style="color:#b00">Failed to load revision history.</p>';
+      }
+    }
+
+    // Event delegation, same precedent as the liveblog entries list above —
+    // one listener covers every row, current and future.
+    historyPanel.addEventListener('click', async function (e) {
+      if (!e.target.classList.contains('btn-restore-revision')) return;
+      var revisionId = e.target.dataset.revisionId;
+      if (!confirm('Restore the article to this version? This will overwrite its current content.')) return;
+
+      e.target.disabled = true;
+      e.target.textContent = 'Restoring...';
+      try {
+        const res = await fetch('/admin/articles/' + articleId + '/revisions/' + revisionId + '/restore', {
+          method: 'POST',
+          headers: { 'x-csrf-token': document.getElementById('csrfTokenField').value },
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Full reload rather than patching form fields in place — restore
+          // is a decisive action, and the edit form has far too many fields
+          // (gallery, co-authors, tags, dates...) to patch piecemeal.
+          location.reload();
+        } else {
+          alert(data.error || 'Restore failed.');
+          e.target.disabled = false;
+          e.target.textContent = 'Restore this version';
+        }
+      } catch (err) {
+        alert('Restore failed.');
+        e.target.disabled = false;
+        e.target.textContent = 'Restore this version';
+      }
+    });
+
+    loadHistory();
   })();
 
   (function () {

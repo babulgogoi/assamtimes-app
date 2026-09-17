@@ -3,7 +3,15 @@
     that every "Comments" jump link/button on the page targets lives on
     the <section> itself, not the caller's wrapper, so there's only ever
     one #comments in the DOM regardless of which design is active. %>
-<section class="comments" id="comments">
+<%
+  // Threaded through from article.ejs — '' for a normal page load, e.g.
+  // '-inline2' for a fragment injected by infinite-scroll.js. Every
+  // hardcoded id below needs it so a second/third comments section in the
+  // DOM never collides with the first.
+  var domSuffix = typeof domSuffix !== 'undefined' ? domSuffix : '';
+  var isInline = typeof isInline !== 'undefined' && isInline;
+%>
+<section class="comments" id="comments<%= domSuffix %>">
   <h2 class="comments__heading">Comments (<%= commentsCount %>)</h2>
 
   <% if (comments.length) { %>
@@ -30,7 +38,8 @@
     <% } else { %>
       <%
         var hasCommentErrors = !!(commentErrors && commentErrors.length);
-        var errorsId = 'commentFormErrors';
+        var errorsId = 'commentFormErrors' + domSuffix;
+        var honeypotId = 'comment_website' + domSuffix;
       %>
       <% if (hasCommentErrors) { %>
         <ul class="comment-form__errors" id="<%= errorsId %>" role="alert">
@@ -55,8 +64,8 @@
         </label>
 
         <div class="comment-form__honeypot" aria-hidden="true">
-          <label for="comment_website">Website</label>
-          <input type="text" id="comment_website" name="website" tabindex="-1" autocomplete="off">
+          <label for="<%= honeypotId %>">Website</label>
+          <input type="text" id="<%= honeypotId %>" name="website" tabindex="-1" autocomplete="off">
         </div>
 
         <div class="h-captcha" data-sitekey="<%= hcaptchaSiteKey %>"></div>
@@ -64,7 +73,7 @@
         <button type="submit" class="comment-form__submit">Submit Comment</button>
       </form>
 
-      <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+      <% if (!isInline) { %><script src="https://js.hcaptcha.com/1/api.js" async defer></script><% } %>
     <% } %>
   </div>
 </section>

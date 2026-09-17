@@ -72,6 +72,21 @@ const pdfLimiter = rateLimit({
   message: 'Too many PDF requests. Please try again later.',
 });
 
+// Infinite-scroll endpoints (public/js/infinite-scroll.js). /inline re-runs
+// articleDetail's full query fan-out per request, so it's capped closer to
+// pdfLimiter than the plain read-only routes above — fast scrolling or a
+// bot walking the chain shouldn't be able to hammer this any harder than a
+// real reader's session (capped client-side at a few auto-loads anyway, see
+// infinite-scroll.js). /view is cheap (one UPDATE) but shares the same
+// limiter for simplicity — both are only ever called from the same feature.
+const inlineArticleLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests. Please try again later.',
+});
+
 // No layout/menu/footer needed for an XML response — keep this above the
 // shared middleware below so it skips that work entirely.
 router.get('/sitemap.xml', publicController.sitemapXml);
@@ -134,6 +149,8 @@ router.get('/', homepageCache, publicController.home);
 router.get('/news', publicController.newsPage);
 router.get('/most-read', publicController.mostReadPage);
 router.get('/article/:slug', publicController.articleDetail);
+router.get('/article/:slug/inline', inlineArticleLimiter, publicController.articleInline);
+router.post('/article/:slug/view', inlineArticleLimiter, publicController.articleMarkViewed);
 router.post('/article/:slug/like', likeLimiter, publicController.likeArticle);
 router.post('/article/:slug/comments', commentLimiter, publicController.submitComment);
 router.get('/category/:category', categoryPageCache, publicController.categoryPage);
