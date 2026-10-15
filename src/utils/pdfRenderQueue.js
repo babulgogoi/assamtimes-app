@@ -12,6 +12,8 @@
 // running, up to MAX_QUEUE more may wait; beyond that, or past
 // WAIT_TIMEOUT_MS while waiting, the caller gets a rejected promise
 // (QueueFullError/QueueTimeoutError) instead of hanging.
+const { recordRenderCompleted } = require('./pdfBrowser');
+
 const MAX_CONCURRENT = 2;
 const MAX_QUEUE = 10;
 const WAIT_TIMEOUT_MS = 20000;
@@ -66,11 +68,21 @@ async function renderOnce(slug, renderFn) {
 
   const promise = (async () => {
     const releaseSlot = await acquire(); // may throw QueueFullError/QueueTimeoutError
+    let result;
     try {
-      return await renderFn();
+      result = await renderFn();
     } finally {
       releaseSlot();
     }
+    // Deliberately called AFTER releaseSlot(), not before — active/waiters
+    // only reflect true post-release idleness once the slot is actually
+    // freed, and the browser recycle decision (pdfBrowser.js) needs that
+    // accurate "is anything else in flight right now" signal, not a
+    // snapshot taken while this render still counted as active. Only
+    // reached on success — a thrown render shouldn't count toward the
+    // recycle-after-N-renders throughput figure.
+    recordRenderCompleted(active === 0 && waiters.length === 0);
+    return result;
   })();
 
   inFlight.set(slug, promise);

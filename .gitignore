@@ -1,5 +1,6 @@
 node_modules/
 chrome/
+tmp/
 .env
 *.log
 npm-debug.log*
