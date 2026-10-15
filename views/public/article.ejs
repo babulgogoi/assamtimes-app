@@ -36,7 +36,7 @@
       <button class="copy-link-btn js-copy-link" type="button" aria-label="Copy article link to clipboard" title="Copy link" data-copied-message="Link copied!" data-url="<%= canonicalUrl %>">
         <%- include('../partials/icons/copy') %>
       </button>
-      <a href="/article/<%= article.slug %>/pdf" class="article-b-share-icon" target="_blank" aria-label="Print this article (downloads a PDF)" title="Print (PDF)">
+      <a href="/article/<%= article.slug %>/pdf" class="article-b-share-icon" target="_blank" rel="nofollow" aria-label="Print this article (downloads a PDF)" title="Print (PDF)">
         <%- include('../partials/icons/print') %>
       </a>
       <a href="mailto:?subject=<%= encodeURIComponent(article.title) %>&body=<%= encodeURIComponent(canonicalUrl) %>" class="article-b-share-icon" aria-label="Share this article by email" title="Share by email">
@@ -179,7 +179,7 @@
         <button class="util-btn" id="btnPrint<%= domSuffix %>" title="Print article" aria-label="Print article">
           &#128424; <span class="util-label">Print</span>
         </button>
-        <a class="util-btn" href="/article/<%= article.slug %>/pdf" title="Download as PDF" aria-label="Download article as PDF" target="_blank">
+        <a class="util-btn" href="/article/<%= article.slug %>/pdf" title="Download as PDF" aria-label="Download article as PDF" target="_blank" rel="nofollow">
           &#128196; <span class="util-label">PDF</span>
         </a>
         <div class="util-divider"></div>
