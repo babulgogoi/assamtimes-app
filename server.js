@@ -264,12 +264,52 @@ const server = app.listen(PORT, () => {
 
 function shutdown(signal) {
   console.log(`${signal} received, shutting down gracefully...`);
-  server.close(() => {
-    Promise.all([pool.end(), require('./src/utils/pdfBrowser').closeBrowser()]).then(() => {
-      process.exit(0);
-    });
+
+  // Starts immediately, in PARALLEL with the HTTP drain below — not
+  // gated behind server.close()'s callback the way this used to be
+  // written. That ordering was a real gap: a lingering keep-alive
+  // connection can make server.close()'s callback never fire before the
+  // force-exit timeout below, which used to mean closeBrowser() (and
+  // the SIGKILL-the-whole-Chrome-process-group it does internally, see
+  // src/utils/pdfBrowser.js) never ran at all — Chrome could outlive the
+  // Node process that launched it. closeBrowser()'s own internal kill
+  // confirmation has its own ~5s bound, comfortably inside the 10s hard
+  // backstop at the bottom of this function, so the process group is
+  // guaranteed dead well before either exit path below fires — in
+  // practice, under this box's pm2-runtime supervision, the OS-level
+  // process tree is usually gone even faster than that regardless (see
+  // CLAUDE.md's PDF Rendering section for what was directly confirmed
+  // and what wasn't about which layer actually does the killing); this
+  // app-level path matters most for deployments where the supervisor
+  // doesn't also tree-kill on its own, and is what performs this app's
+  // own run-directory cleanup either way, which nothing else does.
+  const browserClosed = require('./src/utils/pdfBrowser').closeBrowser().catch((err) => {
+    console.error('Error closing PDF browser during shutdown:', err);
   });
-  // Force-exit if connections don't drain in time.
+
+  const serverClosed = new Promise((resolve) => server.close(resolve));
+
+  // server.close() alone only stops accepting NEW connections — it waits
+  // indefinitely for existing ones to end on their own, which an HTTP
+  // keep-alive connection with no in-flight request may never do.
+  // Force-drain in two steps: idle connections (no in-flight request)
+  // after a short grace period, then everything else after a further
+  // one — each call can make serverClosed resolve sooner by removing
+  // whatever was the last connection blocking it.
+  const idleCloseTimer = setTimeout(() => server.closeIdleConnections(), 3000);
+  const allCloseTimer = setTimeout(() => server.closeAllConnections(), 6000);
+
+  Promise.all([
+    browserClosed,
+    serverClosed,
+    pool.end().catch((err) => console.error('Error closing DB pool during shutdown:', err)),
+  ]).then(() => {
+    clearTimeout(idleCloseTimer);
+    clearTimeout(allCloseTimer);
+    process.exit(0);
+  });
+
+  // Absolute backstop if something above still hangs.
   setTimeout(() => process.exit(1), 10000);
 }
 
