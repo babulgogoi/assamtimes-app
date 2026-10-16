@@ -17,66 +17,94 @@ const EXECUTABLE_PATH = process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser'
 
 // App-owned, non-public, gitignored directory for Chrome's userDataDir —
 // replaces Puppeteer's own default of an auto-generated dir under the
-// shared system /tmp. That default was the root of a real leak (28-day
-// investigation, Oct 2026): a disconnected browser's dir was never cleaned
-// up because nothing closed it before relaunching, and a separate,
-// directly-reproduced bug (two concurrent requests both observing a dead
-// browser and BOTH independently calling puppeteer.launch()) could leak
-// more than one dir per single crash. One subdirectory per worker, named
-// with this OS process's own PID — this app runs as exactly one PM2
-// cluster instance today (confirmed via `pm2 describe assamtimes`:
-// exec_mode cluster_mode, instances: 1), but naming by PID rather than a
-// fixed/shared path means a future bump to `instances` in
-// ecosystem.config.js can never have two workers collide on the same
-// profile directory.
+// shared system /tmp. WORKER_DIR is this worker's own root (named by this
+// Node process's own PID — see the per-worker-safety note in the original
+// Oct 2026 history); each individual LAUNCH gets its own fresh, never-
+// reused subdirectory under it (worker-<pid>/run-<launchId>), not
+// WORKER_DIR itself. That change (Oct 2026, second pass) replaced an
+// earlier version that reused one fixed directory per worker across every
+// relaunch — directly confirmed to collide under concurrency: a
+// synthetic two-concurrent-launches-into-the-same-directory test threw
+// "Opening in existing browser session" every time, matching the real
+// production error ("The browser is already running for .../worker-N")
+// seen 46 times in 12 minutes. A fresh directory per launch makes that
+// entire collision class structurally impossible — there is never a
+// shared resource for two launches to contend over.
 const PROFILE_ROOT = path.join(__dirname, '..', '..', 'tmp', 'chrome-profiles');
-const PROFILE_DIR = path.join(PROFILE_ROOT, 'worker-' + process.pid);
+const WORKER_DIR = path.join(PROFILE_ROOT, 'worker-' + process.pid);
 
-// Recycle thresholds. 200 renders matches the brief's own ballpark figure.
-// RSS_RECYCLE_THRESHOLD_KB went through a real miscalibration during Phase
-// B testing, caught live: an initial 1.5GB was picked before measuring this
-// specific Chromium build's own baseline, which turned out to already sit
-// at ~750-800MB completely idle (confirmed directly via /proc inspection
-// of a freshly-launched, zero-page browser) — combined with ~100-200MB per
-// un-reaped renderer process (see this file's renderer-leak history, not
-// otherwise fixed here), a fresh browser could cross 1.5GB within just a
-// handful of renders, causing recycle-almost-every-render thrashing
-// instead of the intended "every ~200 renders or on genuine excess."
-// Direct measurement during this same investigation showed SUSTAINED,
-// non-crashing operation up to ~2.0-2.3GB under real concurrent load — 3GB
-// sits comfortably above that observed-healthy range while still catching
-// genuine runaway growth well before it threatens this 11GB box (shared
-// with other tenants) under zero swap.
+// Recycle thresholds.
+//
+// MAX_RENDERS_BEFORE_RECYCLE: unchanged, ~200 renders.
+//
+// PSS_RECYCLE_THRESHOLD_KB: this is a genuinely different metric from the
+// RSS-sum this file used to track, not just a retuned number. Summing
+// VmRSS across a process tree double/triple-counts memory pages shared
+// between those processes (Chrome's own shared library and renderer code
+// pages, mapped into every child) — confirmed directly to be wildly
+// wrong on this box: a live production burst showed lastTreeRssKb
+// readings of 17-24GB on a 12GB-RAM, zero-swap box, which is physically
+// impossible as an actual memory figure. PSS (proportional set size, read
+// from /proc/<pid>/smaps_rollup) attributes shared pages proportionally
+// instead of to everyone who maps them, giving the actual physical
+// footprint. Measured directly against this exact Chromium build before
+// picking a number: idle baseline ~130MB, plateauing around ~350-450MB
+// after a burst of both sequential and 2-concurrent real-article renders
+// (15 and 10 renders respectively, same box, same build). 1GB sits with
+// comfortable (~2x) headroom above that observed plateau — tight enough
+// to actually matter as a backstop, not so tight it thrashes the way an
+// earlier RSS-based 1.5GB figure did before being recalibrated once
+// (see git history on this file).
 const MAX_RENDERS_BEFORE_RECYCLE = 200;
-const RSS_RECYCLE_THRESHOLD_KB = 3 * 1024 * 1024;
+const PSS_RECYCLE_THRESHOLD_KB = 1024 * 1024;
+
+// Hard time ceiling: forces a recycle after ~15 minutes regardless of
+// whether the queue ever reports idle. Unlike the render-count/PSS
+// triggers (which wait for an idle moment via recordRenderCompleted()),
+// this calls performRecycle() directly the moment it fires — any render
+// genuinely in flight against the retiring browser at that instant will
+// surface as BrowserDisconnectedError -> a clean 503 (already correct,
+// confirmed end-to-end in the Oct 2026 kill test), not a crash, so forcing
+// it is an acceptable trade against a browser that could otherwise never
+// get recycled at all under sustained, never-idle load.
+const MAX_BROWSER_AGE_MS = 15 * 60 * 1000;
+
 const PAGE_CLOSE_TIMEOUT_MS = 5000;
-const BROWSER_CLOSE_TIMEOUT_MS = 5000;
+// How long retireBrowser() waits for the OS to confirm a SIGKILLed
+// process group is actually gone before its run directory is deleted —
+// a safety net, not expected to ever actually elapse (SIGKILL cannot be
+// caught or delayed), in case the 'exit' event is somehow missed.
+const KILL_CONFIRM_TIMEOUT_MS = 5000;
 
 let browserLaunchPromise = null; // single-flight guard — see getBrowser()
+let launchCounter = 0;
+let currentRunDir = null;
 let renderCount = 0;
-let lastKnownRssKb = 0;
+let lastKnownPssKb = 0;
 let recycleScheduled = false;
+let recycleReason = null;
+let ageCeilingTimer = null;
 
-function readOwnRssKb(pid) {
+function readOwnPssKb(pid) {
   try {
-    const status = fs.readFileSync(`/proc/${pid}/status`, 'utf8');
-    const m = status.match(/^VmRSS:\s+(\d+)\s+kB/m);
+    const smaps = fs.readFileSync(`/proc/${pid}/smaps_rollup`, 'utf8');
+    const m = smaps.match(/^Pss:\s+(\d+)\s+kB/m);
     return m ? Number(m[1]) : 0;
   } catch {
     return 0;
   }
 }
 
-function readTreeRssKb(pid) {
+function readTreePssKb(pid) {
   try {
     const children = fs
       .readFileSync(`/proc/${pid}/task/${pid}/children`, 'utf8')
       .trim()
       .split(/\s+/)
       .filter(Boolean);
-    let total = readOwnRssKb(pid);
+    let total = readOwnPssKb(pid);
     for (const childPid of children) {
-      total += readTreeRssKb(childPid);
+      total += readTreePssKb(childPid);
     }
     return total;
   } catch {
@@ -93,41 +121,64 @@ function isPidRunning(pid) {
   }
 }
 
-// Removes profile directories left behind by a previous run of this same
-// worker PID slot (a prior crash, a kill -9, or an unclean PM2 restart
-// that didn't get a chance to run closeBrowser()'s SIGTERM handler).
-// Deliberately NEVER deletes by age alone — only removes a directory
-// whose own Chrome SingletonLock points at a PID that is not actually
-// running. Age-only deletion risked killing a directory still legitimately
-// in use (e.g. a slow-starting browser, or — if `instances` is ever raised
-// above 1 — another worker's live profile); liveness-checking the lock is
-// the only signal that's actually safe to act on.
+// Removes run-<id> directories left behind by a previous process that
+// never got a chance to clean up after itself (a hard Node crash, not
+// just a Chrome crash — the normal Chrome-crash path now deletes its own
+// run directory directly via retireBrowser(), see below; this is purely a
+// safety net for the case where nothing ever got to run that code at
+// all). Deliberately NEVER deletes by age alone — only removes a
+// directory whose own Chrome SingletonLock points at a PID that is not
+// actually running. Age-only deletion risked killing a directory still
+// legitimately in use (e.g. a slow-starting browser, or — if `instances`
+// is ever raised above 1 — another worker's live profile); liveness-
+// checking the lock is the only signal that's actually safe to act on.
+// Runs once at module load (startup), not continuously — the explicit
+// delete-on-retire path is the primary mechanism now.
 function purgeStaleProfileDirs() {
-  let entries;
+  let workerEntries;
   try {
-    entries = fs.readdirSync(PROFILE_ROOT);
+    workerEntries = fs.readdirSync(PROFILE_ROOT);
   } catch {
     return; // doesn't exist yet on a fresh deploy — nothing to purge
   }
 
-  for (const entry of entries) {
-    if (entry === 'worker-' + process.pid) continue; // never touch our own slot
-
-    const dir = path.join(PROFILE_ROOT, entry);
-    const lockPath = path.join(dir, 'SingletonLock');
-    let targetPid = null;
+  for (const workerEntry of workerEntries) {
+    const workerPath = path.join(PROFILE_ROOT, workerEntry);
+    let runEntries;
     try {
-      const target = fs.readlinkSync(lockPath);
-      const m = target.match(/(\d+)$/);
-      targetPid = m ? Number(m[1]) : null;
+      runEntries = fs.readdirSync(workerPath);
     } catch {
-      // No readable SingletonLock at all (Chrome never finished starting
-      // in this dir, or something already partially cleaned it) — treat
-      // as dead, since there's no live-process claim being made on it.
+      continue; // not a directory (or already gone) — nothing to walk
     }
 
-    if (!targetPid || !isPidRunning(targetPid)) {
-      fs.rmSync(dir, { recursive: true, force: true });
+    let anyKept = false;
+    for (const runEntry of runEntries) {
+      const runPath = path.join(workerPath, runEntry);
+
+      const lockPath = path.join(runPath, 'SingletonLock');
+      let targetPid = null;
+      try {
+        const target = fs.readlinkSync(lockPath);
+        const m = target.match(/(\d+)$/);
+        targetPid = m ? Number(m[1]) : null;
+      } catch {
+        // No readable SingletonLock at all (Chrome never finished
+        // starting in this dir, or something already partially cleaned
+        // it) — treat as dead, since there's no live-process claim.
+      }
+
+      if (!targetPid || !isPidRunning(targetPid)) {
+        fs.rmSync(runPath, { recursive: true, force: true });
+      } else {
+        anyKept = true;
+      }
+    }
+
+    // An emptied-out worker directory (every run-* subdir purged) is just
+    // a husk — clean it up too, but never our OWN worker's directory,
+    // even if we haven't launched into it yet this startup.
+    if (!anyKept && workerPath !== WORKER_DIR) {
+      fs.rmSync(workerPath, { recursive: true, force: true });
     }
   }
 }
@@ -153,10 +204,10 @@ function attachDiagnostics(browser, launchedAt) {
     });
   }
 
-  const rssInterval = pid
+  const pssInterval = pid
     ? setInterval(() => {
-        const rss = readTreeRssKb(pid);
-        if (rss > 0) lastKnownRssKb = rss;
+        const pss = readTreePssKb(pid);
+        if (pss > 0) lastKnownPssKb = pss;
       }, 2000)
     : null;
 
@@ -168,14 +219,14 @@ function attachDiagnostics(browser, launchedAt) {
   });
 
   browser.once('disconnected', () => {
-    if (rssInterval) clearInterval(rssInterval);
+    if (pssInterval) clearInterval(pssInterval);
     const uptimeMs = Date.now() - launchedAt;
     setImmediate(() => {
       console.error(
         '[pdfBrowser] disconnected pid=' + pid +
         ' exitCode=' + exitInfo.code +
         ' signalCode=' + exitInfo.signal +
-        ' lastTreeRssKb=' + lastKnownRssKb +
+        ' lastTreePssKb=' + lastKnownPssKb +
         ' openPages=' + openPages +
         ' uptimeMs=' + uptimeMs
       );
@@ -184,9 +235,12 @@ function attachDiagnostics(browser, launchedAt) {
 }
 
 // Races a close operation against a timeout. If it hangs, SIGKILLs the
-// given process rather than leaving a half-dead browser that still looks
-// "connected" (per isConnected()) but can't actually service a new page —
-// worse than a clean crash, since nothing would ever trigger a relaunch.
+// browser's whole process GROUP (not just the main process) — confirmed
+// directly that a process-group signal reaps every zygote/GPU/utility/
+// renderer descendant in one shot, which a plain single-pid kill would
+// leave behind. Used by pdfController.js for page.close() specifically —
+// a page that won't close is treated as a sign the whole browser is
+// wedged, not just that one tab.
 async function closeWithTimeout(closeFn, timeoutMs, proc) {
   let timedOut = false;
   const timeout = new Promise((resolve) => {
@@ -196,9 +250,9 @@ async function closeWithTimeout(closeFn, timeoutMs, proc) {
     }, timeoutMs);
   });
   await Promise.race([closeFn().catch(() => {}), timeout]);
-  if (timedOut && proc && !proc.killed) {
+  if (timedOut && proc && proc.pid != null && !proc.killed) {
     try {
-      proc.kill('SIGKILL');
+      process.kill(-proc.pid, 'SIGKILL');
     } catch {
       // already gone
     }
@@ -206,42 +260,127 @@ async function closeWithTimeout(closeFn, timeoutMs, proc) {
   return timedOut;
 }
 
+// Unconditionally SIGKILLs the browser's entire process group and waits
+// for the OS to confirm the main process is actually gone. Graceful
+// browser.close() is deliberately never attempted here: there is no
+// state worth preserving (the whole run directory is deleted immediately
+// after this returns regardless), and a graceful close that might hang
+// was exactly the complexity this replaces. Confirmed directly that a
+// single process-group signal reaps every descendant (zygotes, GPU,
+// utility, renderers) — an 11-process tree from a real render went from
+// fully alive to fully gone within 500ms of one `process.kill(-pid, ...)`
+// call, with nothing left behind.
+async function killBrowserGroup(browser) {
+  const proc = browser.process();
+  if (!proc || proc.pid == null) return;
+  const pid = proc.pid;
+
+  const alreadyExited = proc.exitCode !== null || proc.signalCode !== null;
+  const exited = alreadyExited
+    ? Promise.resolve()
+    : new Promise((resolve) => {
+        proc.once('exit', resolve);
+        setTimeout(resolve, KILL_CONFIRM_TIMEOUT_MS); // safety net only
+      });
+
+  try {
+    process.kill(-pid, 'SIGKILL');
+  } catch {
+    // already gone
+  }
+
+  await exited;
+}
+
+function nextRunDir() {
+  launchCounter++;
+  return path.join(WORKER_DIR, 'run-' + launchCounter);
+}
+
+function scheduleAgeCeiling() {
+  if (ageCeilingTimer) clearTimeout(ageCeilingTimer);
+  ageCeilingTimer = setTimeout(() => {
+    recycleScheduled = true;
+    recycleReason = 'recycle-time';
+    performRecycle().catch((err) => console.error('[pdfBrowser] age-ceiling recycle failed:', err));
+  }, MAX_BROWSER_AGE_MS);
+}
+
+// Kills the process group, deletes its run directory, and clears the
+// age-ceiling timer — the one common endpoint every path that ends a
+// browser's life goes through, so "no leftover directory" and "no stale
+// timer firing against a replacement browser later" both hold by
+// construction rather than needing to be re-implemented at each call site.
+//
+// Guarded against being run twice on the same browser — confirmed live
+// that it otherwise can be: two concurrent getBrowser() callers can both
+// await the same already-disconnected browser, both see isConnected()
+// false, and both reach this function for the identical browser object.
+// Harmless in terms of actual cleanup (killBrowserGroup/fs.rmSync are
+// idempotent — "exactly one relaunch" still held even before this guard,
+// confirmed via the 20-relaunch test), but it duplicated the
+// "reason=" log line, which is the one thing here that's actually
+// supposed to carry diagnostic meaning.
+const retiredBrowsers = new WeakSet();
+async function retireBrowser(browser, reason) {
+  if (retiredBrowsers.has(browser)) return;
+  retiredBrowsers.add(browser);
+
+  if (ageCeilingTimer) {
+    clearTimeout(ageCeilingTimer);
+    ageCeilingTimer = null;
+  }
+  const dir = currentRunDir;
+  const proc = browser.process();
+  console.error('[pdfBrowser] closing pid=' + (proc ? proc.pid : '?') + ' reason=' + reason);
+  await killBrowserGroup(browser);
+  if (dir) fs.rmSync(dir, { recursive: true, force: true });
+  if (currentRunDir === dir) currentRunDir = null;
+}
+
 async function launchBrowser() {
-  fs.mkdirSync(PROFILE_DIR, { recursive: true });
+  const runDir = nextRunDir();
+  fs.mkdirSync(runDir, { recursive: true });
+
   const launchedAt = Date.now();
-  const browser = await puppeteer.launch({
-    executablePath: EXECUTABLE_PATH,
-    userDataDir: PROFILE_DIR,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-    headless: true,
-  });
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      executablePath: EXECUTABLE_PATH,
+      userDataDir: runDir,
+      args: [
+        '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
+        // Profile directory bloat was dominated by Chrome's own on-disk
+        // cache (Default/Cache measured at 738MB of a 772MB profile on
+        // the live box) — these two effectively disable it. Harmless for
+        // this app's actual usage (each run directory is single-use and
+        // deleted immediately after, see retireBrowser()), and keeps disk
+        // I/O down while a run is still active.
+        '--disk-cache-size=1', '--media-cache-size=1',
+      ],
+      headless: true,
+    });
+  } catch (err) {
+    fs.rmSync(runDir, { recursive: true, force: true });
+    throw err;
+  }
+
+  currentRunDir = runDir;
   attachDiagnostics(browser, launchedAt);
   renderCount = 0;
-  // Without this, a brand-new browser inherits the PREVIOUS instance's
-  // last-sampled RSS until its own periodic sampler fires for the first
-  // time (every 2s) — confirmed live during testing to cause exactly the
-  // kind of immediate-recycle thrashing this reset prevents: a fresh
-  // browser being judged against a stale, already-high number from the
-  // instance it just replaced.
-  lastKnownRssKb = 0;
+  lastKnownPssKb = 0;
+  scheduleAgeCeiling();
   return browser;
 }
 
 // Starts a launch and attaches a side-effect-only cleanup to it, so a
 // FAILED launch can never get stuck replaying the same rejected promise
-// forever — confirmed directly during Phase B testing (via an isolated,
-// non-live-server reproduction with a mocked failing launch): an earlier
-// version only cleared browserLaunchPromise on the "existing promise
-// turned out disconnected" branch of getBrowser() below, not on the
-// very-first-launch-ever branch, so a launch failure on that path left
-// every PDF request permanently broken afterward with no self-healing
-// retry. Attaching the clear-on-failure behavior here, at the single
-// point where every launch attempt is created, covers both call sites by
-// construction instead of needing to be re-implemented at each one. The
-// `browserLaunchPromise === promise` guard matters: if something else
-// (another concurrent relaunch, a recycle) has already replaced the
-// reference with a NEWER attempt by the time this one's rejection is
-// observed, this must not clear that newer one out from under it.
+// forever (see git history on this file for the original, directly-
+// reproduced bug this fixes). The `browserLaunchPromise === promise`
+// guard matters: if something else (another concurrent relaunch, a
+// recycle) has already replaced the reference with a NEWER attempt by
+// the time this one's rejection is observed, this must not clear that
+// newer one out from under it.
 function startLaunch() {
   const promise = launchBrowser();
   promise.catch(() => {
@@ -274,7 +413,11 @@ async function getBrowser() {
     const browser = await browserLaunchPromise; // rejection propagates to this call's caller; startLaunch()'s .catch() already handles clearing the shared reference
     if (browser.isConnected()) return browser;
     browserLaunchPromise = null;
-    await closeWithTimeout(() => browser.close(), BROWSER_CLOSE_TIMEOUT_MS, browser.process());
+    // Reaching here means nobody has deliberately retired this browser
+    // yet (every deliberate path — recycle/age-ceiling/shutdown — clears
+    // browserLaunchPromise itself before this branch could ever see the
+    // old browser again) — so an organic crash is the only explanation.
+    await retireBrowser(browser, 'crash');
   }
 
   if (!browserLaunchPromise) {
@@ -285,20 +428,27 @@ async function getBrowser() {
 
 async function closeBrowser() {
   if (!browserLaunchPromise) return;
-  const browser = await browserLaunchPromise;
+  const toClose = browserLaunchPromise;
   browserLaunchPromise = null;
-  await closeWithTimeout(() => browser.close(), BROWSER_CLOSE_TIMEOUT_MS, browser.process());
+  try {
+    const browser = await toClose;
+    await retireBrowser(browser, 'idle');
+  } catch {
+    // launch had already failed — nothing to close
+  }
 }
 
 async function performRecycle() {
+  const reason = recycleReason || 'recycle-count';
   recycleScheduled = false;
+  recycleReason = null;
   renderCount = 0;
   if (!browserLaunchPromise) return;
   const toClose = browserLaunchPromise;
   browserLaunchPromise = null; // next getBrowser() call relaunches lazily
   try {
     const browser = await toClose;
-    await closeWithTimeout(() => browser.close(), BROWSER_CLOSE_TIMEOUT_MS, browser.process());
+    await retireBrowser(browser, reason);
   } catch {
     // already gone — nothing to close
   }
@@ -308,13 +458,22 @@ async function performRecycle() {
 // failed one — a timeout/error shouldn't count toward recycling
 // throughput). queueIsIdle is passed in by the caller, which already
 // knows its own active/waiters state at the exact moment the slot is
-// released — recycling only ever proceeds "only when no render is in
-// flight," per the brief, so a busy queue just defers the check to
-// whichever later completion actually drains it to zero.
+// released — the render-count/PSS triggers only ever proceed "only when
+// no render is in flight," per the brief, so a busy queue just defers the
+// check to whichever later completion actually drains it to zero. The
+// hard age ceiling (scheduleAgeCeiling(), above) is the one trigger that
+// deliberately does NOT wait for this — it forces a recycle on its own
+// timer regardless of idleness.
 function recordRenderCompleted(queueIsIdle) {
   renderCount++;
-  if (lastKnownRssKb >= RSS_RECYCLE_THRESHOLD_KB || renderCount >= MAX_RENDERS_BEFORE_RECYCLE) {
-    recycleScheduled = true;
+  if (!recycleScheduled) {
+    if (renderCount >= MAX_RENDERS_BEFORE_RECYCLE) {
+      recycleScheduled = true;
+      recycleReason = 'recycle-count';
+    } else if (lastKnownPssKb >= PSS_RECYCLE_THRESHOLD_KB) {
+      recycleScheduled = true;
+      recycleReason = 'recycle-rss';
+    }
   }
   if (recycleScheduled && queueIsIdle) {
     performRecycle().catch((err) => console.error('[pdfBrowser] recycle failed:', err));
